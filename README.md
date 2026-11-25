@@ -8,7 +8,7 @@ Pahalı skor cihazlarına ücretsiz bir alternatif olması hedefleniyor.
 - [x] Kontrat puanı hesaplama (kontr/rekontr, vulnerability, şlemler, batma cezaları)
 - [x] Board numarasından dağıtıcı ve vulnerability
 - [x] Mobil uyumlu skor hesaplayıcı ekranı
-- [ ] Turnuva kurulumu (Mitchell hareketi)
+- [x] Turnuva kurulumu (Mitchell / skip Mitchell hareketi, tek çift sayısında oturan çift)
 - [ ] Masa ekranı ve skor girişi
 - [ ] Matchpoint / IMP hesaplama ve sıralama
 - [ ] Çoklu cihaz (gerçek zamanlı senkronizasyon)
@@ -28,9 +28,16 @@ npm run build   # yayın için derleme
 ```
 src/
   scoring/
-    score.ts        # puan hesaplama motoru
-    score.test.ts   # testler
-  App.tsx           # skor hesaplayıcı ekranı
+    score.ts           # puan hesaplama motoru
+    score.test.ts
+  tournament/
+    movement.ts        # Mitchell hareketi (kim, hangi masada, hangi boardları oynar)
+    movement.test.ts
+    storage.ts         # turnuvayı tarayıcıya kaydetme
+  components/
+    Calculator.tsx     # skor hesaplayıcı ekranı
+    Tournament.tsx     # turnuva kurulumu ve tur tablosu
+  App.tsx              # sekmeler
 ```
 
 ## Teknolojiler
