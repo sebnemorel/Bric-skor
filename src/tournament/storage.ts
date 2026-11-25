@@ -1,5 +1,6 @@
 // Turnuvayı tarayıcının localStorage'ına kaydeder.
 // Şimdilik tek cihaz için; çoklu cihaz aşamasında burası veritabanıyla değişecek.
+import type { Results } from './results'
 
 export interface Tournament {
   name: string
@@ -7,6 +8,7 @@ export interface Tournament {
   pairCount: number
   boardsPerRound: number
   createdAt: number
+  results: Results
 }
 
 const KEY = 'bric-skor:tournament'
@@ -14,7 +16,9 @@ const KEY = 'bric-skor:tournament'
 export function loadTournament(): Tournament | null {
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as Tournament) : null
+    if (!raw) return null
+    const t = JSON.parse(raw) as Tournament
+    return { ...t, results: t.results ?? {} } // eski sürümle kaydedilenlerde results yok
   } catch {
     return null
   }

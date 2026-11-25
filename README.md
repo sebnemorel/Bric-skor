@@ -9,7 +9,7 @@ Pahalı skor cihazlarına ücretsiz bir alternatif olması hedefleniyor.
 - [x] Board numarasından dağıtıcı ve vulnerability
 - [x] Mobil uyumlu skor hesaplayıcı ekranı
 - [x] Turnuva kurulumu (Mitchell / skip Mitchell hareketi, tek çift sayısında oturan çift)
-- [ ] Masa ekranı ve skor girişi
+- [x] Masa ekranı ve skor girişi (pas, düzeltme, silme; skorlar cihazda saklanır)
 - [ ] Matchpoint / IMP hesaplama ve sıralama
 - [ ] Çoklu cihaz (gerçek zamanlı senkronizasyon)
 - [ ] PWA ve Android uygulaması
@@ -33,10 +33,14 @@ src/
   tournament/
     movement.ts        # Mitchell hareketi (kim, hangi masada, hangi boardları oynar)
     movement.test.ts
+    results.ts         # masa sonuçlarının kaydı
+    results.test.ts
     storage.ts         # turnuvayı tarayıcıya kaydetme
   components/
+    ContractForm.tsx   # kontrat / deklaran / sonuç seçimi (ortak)
     Calculator.tsx     # skor hesaplayıcı ekranı
-    Tournament.tsx     # turnuva kurulumu ve tur tablosu
+    Tournament.tsx     # kurulum, tur tablosu, masa ve skor girişi
+    ui.tsx             # küçük ortak parçalar
   App.tsx              # sekmeler
 ```
 
