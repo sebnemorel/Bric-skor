@@ -13,6 +13,7 @@ import {
 import { loadTournament, saveTournament, type Tournament as T } from '../tournament/storage'
 import { BoardMeta } from './BoardHeader'
 import ContractForm from './ContractForm'
+import Standings from './Standings'
 import { BackButton, Card, RoundButton, ScoreBoxes } from './ui'
 
 const MINUTES_PER_BOARD = 7.5
@@ -127,12 +128,13 @@ function Setup({ onCreate }: { onCreate: (t: T) => void }) {
 
 // ---------------- Tur tablosu ----------------
 
-function RoundView({ tournament, m, round, setRound, openTable, onReset }: {
+function RoundView({ tournament, m, round, setRound, openTable, openStandings, onReset }: {
   tournament: T
   m: Movement
   round: number
   setRound: (r: number) => void
   openTable: (table: number) => void
+  openStandings: () => void
   onReset: () => void
 }) {
   const assignments = m.rounds[round - 1]
@@ -151,6 +153,13 @@ function RoundView({ tournament, m, round, setRound, openTable, onReset }: {
           <div className="h-full bg-emerald-600" style={{ width: `${(entered / expected) * 100}%` }} />
         </div>
         <div className="mt-1 text-xs text-slate-500">{entered} / {expected} skor girildi</div>
+        <button
+          type="button"
+          onClick={openStandings}
+          className="mt-3 h-11 w-full rounded-xl bg-amber-400 font-semibold text-slate-900"
+        >
+          🏆 Sıralama ve sonuçlar
+        </button>
       </Card>
 
       <Card className="flex items-center justify-between">
@@ -331,6 +340,7 @@ type View =
   | { kind: 'round' }
   | { kind: 'table'; table: number }
   | { kind: 'board'; table: number; board: number }
+  | { kind: 'standings' }
 
 export default function Tournament() {
   const [tournament, setTournament] = useState<T | null>(() => loadTournament())
@@ -357,6 +367,10 @@ export default function Tournament() {
         }}
       />
     )
+  }
+
+  if (view.kind === 'standings') {
+    return <Standings tournament={tournament} m={m} back={() => setView({ kind: 'round' })} />
   }
 
   if (view.kind === 'table') {
@@ -406,6 +420,7 @@ export default function Tournament() {
       round={round}
       setRound={setRound}
       openTable={table => setView({ kind: 'table', table })}
+      openStandings={() => setView({ kind: 'standings' })}
       onReset={() => update(null)}
     />
   )
