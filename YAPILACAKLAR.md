@@ -7,6 +7,16 @@
   - Turnuva kodu ile masaya katılma, canlı sıralama.
   - Aynı boarda iki kişi aynı anda girerse ne olacağı.
 
+- [ ] **Tarayıcılarda yükleme kısmına detaylı bakılacak**
+  - Her tarayıcıda "Telefona kur" akışını gerçek telefonda tek tek dene:
+    Chrome, telefonun kendi tarayıcısı (Xiaomi/Huawei/Honor vb.), Samsung Internet, Firefox, Opera, iPhone Safari.
+  - Menüdeki seçeneklerin gerçek adlarını kontrol et ve talimatları birebir onlara göre düzelt
+    (ör. Chrome'da "Uygulamayı yükle"; telefonun kendi tarayıcısında ⊞ menüsü → satırı kaydır → "Ana Ekrana Ekle").
+  - "Chrome'da aç ve kur" butonu: Chrome yüklü değilse ne oluyor? Play Store'a yönlendirmeli mi?
+  - Telefonun kendi tarayıcısından "Ana Ekrana Ekle" ile eklenen simge tam ekran mı açılıyor, yoksa tarayıcı içinde mi?
+  - Kurulumdan sonra banner gerçekten kayboluyor mu, kontrol et.
+  - Kalıcı çözüm: Play Store sürümü (aşağıda).
+
 ## Sonra
 
 - [ ] Android uygulaması (Capacitor ile Play Store)

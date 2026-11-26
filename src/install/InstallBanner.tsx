@@ -73,6 +73,37 @@ function GuideSheet({ guide, onClose }: { guide: NonNullable<ReturnType<typeof i
         <h2 className="text-lg font-bold">Uygulamayı telefona kur</h2>
         <p className="mb-4 text-sm text-slate-500">{guide.title}</p>
 
+        {guide.suggestChrome && (
+          <div className="mb-5 space-y-2">
+            <a
+              href={chromeIntent}
+              className="flex h-14 w-full flex-col items-center justify-center rounded-2xl bg-emerald-700 text-white"
+            >
+              <span className="font-semibold">Chrome'da aç ve kur</span>
+              <span className="text-xs opacity-80">Önerilen · tek dokunuşla kurulur</span>
+            </a>
+            <button
+              type="button"
+              className="h-11 w-full rounded-2xl border border-slate-300 text-sm font-medium"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(url)
+                  setCopied(true)
+                } catch {
+                  window.prompt('Bağlantıyı kopyala:', url)
+                }
+              }}
+            >
+              {copied ? 'Kopyalandı ✓' : 'Bağlantıyı kopyala (Chrome açılmazsa)'}
+            </button>
+            <div className="flex items-center gap-3 pt-3 text-xs text-slate-400">
+              <div className="h-px flex-1 bg-slate-200" />
+              ya da bu tarayıcıda kur
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+          </div>
+        )}
+
         <ol className="space-y-3">
           {guide.steps.map((s, i) => (
             <li key={i} className="flex gap-3">
@@ -83,31 +114,6 @@ function GuideSheet({ guide, onClose }: { guide: NonNullable<ReturnType<typeof i
             </li>
           ))}
         </ol>
-
-        {guide.suggestChrome && (
-          <div className="mt-5 space-y-2">
-            <a
-              href={chromeIntent}
-              className="flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-700 font-semibold text-white"
-            >
-              Chrome'da aç
-            </a>
-            <button
-              type="button"
-              className="h-12 w-full rounded-2xl border border-slate-300 font-medium"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(url)
-                  setCopied(true)
-                } catch {
-                  window.prompt('Bağlantıyı kopyala:', url)
-                }
-              }}
-            >
-              {copied ? 'Kopyalandı ✓' : 'Bağlantıyı kopyala'}
-            </button>
-          </div>
-        )}
 
         <p className="mt-5 text-xs text-slate-500">
           Kurduktan sonra uygulama ana ekranda yeşil maça simgesiyle görünür ve internet olmadan da çalışır.

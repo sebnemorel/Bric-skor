@@ -90,10 +90,11 @@ export function installGuide(browser: Browser): InstallGuide | null {
     case 'huawei':
     case 'other-android':
       return {
-        title: 'Telefonun kendi tarayıcısı',
+        title: 'Telefonun kendi tarayıcısı',  // tek dokunuşla kurulumu desteklemiyor
         steps: [
-          'Menüde (⋮, ☰ veya ⊞) "Ana ekrana ekle", "Kısayol ekle" ya da "Sayfayı ekle" gibi bir seçenek ara.',
-          'Bulamazsan en sağlam yol: bu sayfayı Chrome\'da aç, orada "Uygulamayı yükle" çıkar.',
+          'Tarayıcının menüsünü aç: sağ üstte ⋮ yoksa sağ altta ⊞ ya da ☰ simgesine dokun.',
+          'Menüde "Ana Ekrana Ekle" seçeneğini bul. Simgeler yan yana diziliyse satırı sola kaydırman gerekebilir.',
+          'Açılan pencerede "Ekle"ye dokun.',
         ],
         suggestChrome: true,
       }
@@ -101,7 +102,11 @@ export function installGuide(browser: Browser): InstallGuide | null {
       // Normalde Chrome kendi yükleme penceresini açar; açmazsa elle yol:
       return {
         title: 'Chrome',
-        steps: ['Sağ üstteki ⋮ menüsüne dokun.', '"Uygulamayı yükle" ya da "Ana ekrana ekle"yi seç.', '"Yükle"ye dokun.'],
+        steps: [
+          'Sağ üstteki ⋮ menüsüne dokun.',
+          '"Uygulamayı yükle" seçeneğine dokun (bazı sürümlerde "Ana ekrana ekle" yazar).',
+          'Açılan pencerede "Yükle"ye dokun.',
+        ],
         suggestChrome: false,
       }
     case 'desktop':
