@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     // PWA: telefona "uygulama" olarak kurulabilmesi ve internetsiz çalışması için
     VitePWA({
-      registerType: 'autoUpdate', // yeni sürüm yayınlanınca kendiliğinden güncellenir
+      registerType: 'prompt', // yeni sürüm inince kullanıcıya "Yenile" şeridi gösterilir (UpdatePrompt.tsx)
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Briç Skor Akdeniz',

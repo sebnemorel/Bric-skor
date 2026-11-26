@@ -24,7 +24,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 - [ ] IMP hesaplama
 - [x] "Masam" modu: masadaki telefon sadece kendi masasını görür, turlar arası hareket talimatı verir
 - [x] Çoklu cihaz: 6 haneli turnuva kodu, her masa kendi telefonundan girer, canlı sıralama, internetsizken bekletme (Supabase)
-- [x] PWA (telefona kurulabilir, internetsiz çalışır)
+- [x] PWA (telefona kurulabilir, internetsiz çalışır, yeni sürüm çıkınca "Yenile" şeridi)
 - [x] Her tarayıcı için kurulum yardımı (Safari, Samsung Internet, Firefox, telefonun kendi tarayıcısı)
 - [ ] Android uygulaması (Play Store)
 
@@ -73,6 +73,7 @@ src/
   install/
     browser.ts         # tarayıcı algılama ve kurulum talimatları
     InstallBanner.tsx  # "Telefona kur" banner'ı
+    UpdatePrompt.tsx   # "Yeni sürüm hazır · Yenile" şeridi
   components/
     ContractForm.tsx   # kontrat / deklaran / sonuç seçimi (ortak)
     Calculator.tsx     # skor hesaplayıcı ekranı

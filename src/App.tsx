@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Calculator from './components/Calculator'
 import Tournament from './components/Tournament'
 import InstallBanner from './install/InstallBanner'
+import UpdatePrompt from './install/UpdatePrompt'
 
 type Tab = 'tournament' | 'calculator'
 
@@ -35,6 +36,8 @@ export default function App() {
       </nav>
 
       {tab === 'tournament' ? <Tournament /> : <Calculator />}
+
+      <UpdatePrompt />
     </main>
   )
 }
