@@ -1,4 +1,4 @@
-# Briç Skor
+# Briç Skor Akdeniz
 
 Duplicate briç turnuvaları için açık kaynak, telefondan kullanılabilen skor giriş sistemi.
 Pahalı skor cihazlarına ücretsiz bir alternatif olması hedefleniyor.

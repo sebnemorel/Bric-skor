@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate', // yeni sürüm yayınlanınca kendiliğinden güncellenir
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Briç Skor',
-        short_name: 'Briç Skor',
+        name: 'Briç Skor Akdeniz',
+        short_name: 'Briç Skor', // ana ekranda simgenin altında görünen kısa ad
         description: 'Duplicate briç turnuvaları için skor giriş sistemi',
         lang: 'tr',
         start_url: '/',

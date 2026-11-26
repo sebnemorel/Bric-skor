@@ -15,7 +15,7 @@ export default function App() {
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-emerald-50 p-4 text-slate-900">
-      <h1 className="mb-3 text-center text-2xl font-bold">Briç Skor</h1>
+      <h1 className="mb-3 text-center text-2xl font-bold">Briç Skor Akdeniz</h1>
 
       <InstallBanner />
 

@@ -6,6 +6,14 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 
 ## İyileştirmeler (ana plan bitince)
 
+- [ ] **Oyuncu isimleri ve kategoriler** (kulübün bricskor.com sonuç sayfası gibi)
+  - "K-G 3" yerine "Ayşe Yılmaz – Mehmet Kaya"
+  - Kategori: Açık, Senyör, Karışık, Genç, Kadın; kategoriye göre sıralama
+- [ ] **Turnuva arşivi / takvim**: geçmiş turnuvalar silinmesin, liste halinde görünsün
+- [ ] **Herkese açık sonuç sayfası**: uygulama kurmadan linkle açılan, sadece okunan sıralama
+- [ ] **Oyuncu arama ve oyuncu sayfası**: bir oyuncunun tüm turnuvalardaki sonuçları
+- [ ] **"Yeni sürüm var, yenile" bildirimi**: telefondaki uygulama eski sürümde kalmasın
+
 - [ ] **Tarayıcılarda yükleme kısmına detaylı bakılacak**
   - Her tarayıcıda "Telefona kur" akışını gerçek telefonda tek tek dene:
     Chrome, telefonun kendi tarayıcısı (Xiaomi/Huawei/Honor vb.), Samsung Internet, Firefox, Opera, iPhone Safari.
@@ -37,6 +45,7 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Masa ekranı ve skor girişi
 - [x] Matchpoint ve sıralama
 - [x] Canlı yayın: https://bric-skor-akdeniz.vercel.app
+- [x] Uygulama adı "Briç Skor Akdeniz" oldu (kulübün kullandığı bricskor.com ile karışmasın)
 - [x] PWA (Chrome'da kurulabilir, internetsiz çalışır)
 - [x] Çoklu cihaz (Supabase): 6 haneli kod / linkle katılma, ortak skorlar, canlı güncelleme, internetsizken bekletme
 - [x] "Masam" modu: masa seçici, otomatik tur geçişi, tur sonu hareket talimatı (boardlar / D-B nereye)

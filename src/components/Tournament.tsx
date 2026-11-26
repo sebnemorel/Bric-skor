@@ -259,7 +259,7 @@ function CodeBox({ tournament, status, pendingCount }: { tournament: T; status: 
     const text = `${tournament.name} turnuvasına katıl. Kod: ${code}`
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Briç Skor', text, url: link })
+        await navigator.share({ title: 'Briç Skor Akdeniz', text, url: link })
         return
       }
       await navigator.clipboard.writeText(`${text}\n${link}`)
