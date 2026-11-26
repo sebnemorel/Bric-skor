@@ -44,6 +44,8 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Matchpoint ve sıralama
 - [x] Canlı yayın: https://bric-skor-akdeniz.vercel.app
 - [x] Oyuncu isimleri ve kategoriler: hakem girer, çiftler düzeltebilir; sıralamada isim, kategori ve kategori filtresi
+- [x] Hakem şifresi (isteğe bağlı) ve anlaşılır hata mesajları
+- [x] Masa ekranında "Turnuvadan çık"
 - [x] Sabit masalar (kulübün olağan düzeni): çiftler yerinde, her masa aynı boardları oynar (36'ya kadar), K-G/D-B sıralama
 - [x] Kurulumda hareket seçimi: Sabit masalar / Howell / Mitchell
 - [x] Howell: 4 çift / 2 masa turnuva (herkes herkesle, tek sıralama)

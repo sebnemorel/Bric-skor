@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { cloudEnabled, createTournament, deleteTournament, joinTournament, newAdminSecret } from '../cloud/api'
+import { cloudEnabled, createTournament, deleteTournament, joinTournament, newAdminSecret, verifyAdminPin } from '../cloud/api'
 import { isValidCode, normalizeCode } from '../cloud/sync'
 import { useCloudSync, type SyncStatus } from '../cloud/useCloudSync'
 import {
@@ -76,13 +76,16 @@ const KIND_INFO: Record<MovementKind, { label: string; hint: string }> = {
   mitchell: { label: 'Mitchell', hint: '5+ çift: K-G sabit, D-B ve boardlar her tur yer değiştirir' },
 }
 
-function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => Promise<void> }) {
+const validPin = (pin: string) => pin === '' || /^[0-9]{4,6}$/.test(pin)
+
+function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean, pin: string) => Promise<void> }) {
   const [name, setName] = useState('Kulüp Turnuvası')
   const [pairCount, setPairCount] = useState(4)
   const [kind, setKind] = useState<MovementKind>('stationary')
   const [totalBoards, setTotalBoards] = useState(12) // sabit masalar
   const [boardsPerRound, setBoardsPerRound] = useState(3) // Howell / Mitchell
   const [shared, setShared] = useState(cloudEnabled)
+  const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -209,6 +212,25 @@ function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => 
               </span>
             </span>
           </label>
+          {shared && (
+            <label className="mt-4 block border-t border-slate-100 pt-3">
+              <span className="text-sm font-medium text-slate-500">Hakem şifresi (isteğe bağlı)</span>
+              <input
+                className={`mt-1 w-full rounded-xl border px-3 py-2 text-lg tracking-[0.3em] ${
+                  validPin(pin) ? 'border-slate-300' : 'border-red-400'
+                }`}
+                value={pin}
+                onChange={e => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="4-6 rakam"
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                Telefonunu değiştirirsen ya da turnuvadan çıkarsan, kodla katılıp bu şifreyle yönetici yetkisini
+                (turnuvayı silme) geri alırsın. Unutma, kimseyle paylaşma.
+              </span>
+            </label>
+          )}
         </Card>
       )}
 
@@ -217,7 +239,7 @@ function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => 
       <button
         type="button"
         className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white disabled:opacity-40"
-        disabled={!name.trim() || busy || !m}
+        disabled={!name.trim() || busy || !m || (shared && !validPin(pin))}
         onClick={async () => {
           setBusy(true)
           setError(null)
@@ -231,6 +253,7 @@ function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => 
                 movement: kind,
               },
               shared,
+              shared ? pin : '',
             )
           } catch (e) {
             setError(
@@ -298,7 +321,7 @@ function Join({ initialCode, onJoin }: { initialCode: string; onJoin: (code: str
 }
 
 function Start({ onCreate, onJoin }: {
-  onCreate: (t: NewTournament, shared: boolean) => Promise<void>
+  onCreate: (t: NewTournament, shared: boolean, pin: string) => Promise<void>
   onJoin: (code: string) => Promise<void>
 }) {
   const initialCode = new URLSearchParams(window.location.search).get('kod') ?? ''
@@ -374,9 +397,70 @@ function CodeBox({ tournament, status, pendingCount }: { tournament: T; status: 
   )
 }
 
+// ---------------- Hakem şifresiyle yönetici olma ----------------
+
+function AdminClaim({ code, onClaim }: { code: string; onClaim: (pin: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [pin, setPin] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="h-11 w-full rounded-2xl bg-white text-sm font-medium text-slate-600">
+        🔑 Hakem misin? Şifreyle yönetici ol
+      </button>
+    )
+  }
+
+  return (
+    <Card className="space-y-3">
+      <div className="font-medium">Hakem şifresi</div>
+      <input
+        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-center text-2xl tracking-[0.4em]"
+        value={pin}
+        onChange={e => {
+          setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))
+          setMsg(null)
+        }}
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="••••"
+      />
+      {msg && <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{msg}</p>}
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setOpen(false)} className="h-11 rounded-xl bg-slate-100 text-sm font-medium">
+          Vazgeç
+        </button>
+        <button
+          type="button"
+          disabled={pin.length < 4 || busy}
+          className="h-11 rounded-xl bg-emerald-700 text-sm font-semibold text-white disabled:opacity-40"
+          onClick={async () => {
+            setBusy(true)
+            try {
+              const r = await verifyAdminPin(code, pin)
+              if (r.ok) onClaim(pin)
+              else if (r.locked) setMsg('Çok fazla yanlış deneme yapıldı, şifre kilitlendi. Turnuvayı kuran telefondan ya da Supabase panelinden işlem yapılabilir.')
+              else if (!r.hasPin) setMsg('Bu turnuva kurulurken hakem şifresi belirlenmemiş.')
+              else setMsg('Şifre yanlış.')
+            } catch (e) {
+              setMsg((e as Error).message)
+            } finally {
+              setBusy(false)
+            }
+          }}
+        >
+          Onayla
+        </button>
+      </div>
+    </Card>
+  )
+}
+
 // ---------------- Tur tablosu ----------------
 
-function RoundView({ tournament, m, round, setRound, openTable, openStandings, openPicker, openPairs, onLeave, onDelete, status, pendingCount }: {
+function RoundView({ tournament, m, round, setRound, openTable, openStandings, openPicker, openPairs, onLeave, onDelete, onClaimAdmin, status, pendingCount }: {
   tournament: T
   m: Movement
   round: number
@@ -387,6 +471,7 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
   openPairs: () => void
   onLeave: () => void
   onDelete: () => void
+  onClaimAdmin: (pin: string) => void
   status: SyncStatus
   pendingCount: number
 }) {
@@ -514,6 +599,7 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
           Turnuvayı herkes için sil
         </button>
       )}
+      {isCloud && !isAdmin && <AdminClaim code={tournament.cloud!.code} onClaim={onClaimAdmin} />}
       {isCloud && (
         <button
           type="button"
@@ -676,11 +762,11 @@ export default function Tournament() {
   if (!tournament || !m) {
     return (
       <Start
-        onCreate={async (input, shared) => {
+        onCreate={async (input, shared, pin) => {
           const t: T = { ...input, createdAt: Date.now(), results: {} }
           if (shared && cloudEnabled) {
             const adminSecret = newAdminSecret()
-            const { id, code } = await createTournament({ ...input, adminSecret })
+            const { id, code } = await createTournament({ ...input, adminSecret, pin })
             t.cloud = { id, code, adminSecret }
           }
           replace(t)
@@ -834,6 +920,15 @@ export default function Tournament() {
         } catch (e) {
           window.alert((e as Error).message)
         }
+      }}
+      onClaimAdmin={pin => {
+        // Hakem şifresi bu telefonda yönetici anahtarı olarak saklanır (sunucu şifreyle silmeye izin verir)
+        setTournament(prev => {
+          if (!prev?.cloud) return prev
+          const next = { ...prev, cloud: { ...prev.cloud, adminSecret: pin } }
+          saveTournament(next)
+          return next
+        })
       }}
       status={sync.status}
       pendingCount={sync.pendingCount}

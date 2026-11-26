@@ -47,9 +47,27 @@ export function newAdminSecret(): string {
   return crypto.randomUUID() + crypto.randomUUID()
 }
 
+/** Supabase hatasını kullanıcıya anlaşılır bir mesaja çevirir. */
+export function explainError(message: string, error: unknown): string {
+  const e = (error ?? {}) as { code?: string; message?: string; name?: string }
+  const text = `${e.message ?? ''}`
+  // Sunucu fonksiyonu tanımıyor → bir SQL güncellemesi çalıştırılmamış
+  if (e.code === 'PGRST202' || e.code === '42883' || /could not find the function/i.test(text)) {
+    return `${message} Sunucu güncel değil: Supabase'de supabase klasöründeki son SQL dosyası çalıştırılmamış olabilir.`
+  }
+  // Veritabanı kuralına takıldı (ör. geçersiz şifre, çift sayısı)
+  if (e.code === 'P0001' || e.code === '23514') {
+    return `${message} ${text.includes('rakam') ? 'Hakem şifresi 4-6 rakam olmalı.' : 'Sunucu bu ayarları kabul etmedi; SQL güncellemelerinin hepsi çalıştırıldı mı?'}`
+  }
+  if (e.name === 'TypeError' || /failed to fetch|network/i.test(text)) {
+    return `${message} İnternet bağlantını kontrol et.`
+  }
+  return message
+}
+
 function fail(message: string, error: unknown): never {
   console.error(message, error)
-  throw new Error(message)
+  throw new Error(explainError(message, error))
 }
 
 export async function createTournament(input: {
@@ -59,6 +77,7 @@ export async function createTournament(input: {
   boardsPerRound: number
   movement?: MovementKind
   adminSecret: string
+  pin?: string
 }): Promise<{ id: string; code: string }> {
   const { data, error } = await db().rpc('create_tournament', {
     p_name: input.name,
@@ -67,21 +86,29 @@ export async function createTournament(input: {
     p_boards_per_round: input.boardsPerRound,
     p_admin_secret: input.adminSecret,
     p_movement: input.movement ?? null,
+    p_pin: input.pin || null,
   })
-  if (error || !data) fail('Turnuva oluşturulamadı. İnternet bağlantını kontrol et.', error)
+  if (error || !data) fail('Turnuva oluşturulamadı.', error)
   return data as { id: string; code: string }
 }
 
 export async function joinTournament(code: string): Promise<CloudTournament | null> {
   const { data, error } = await db().rpc('join_tournament', { p_code: code })
-  if (error) fail('Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.', error)
+  if (error) fail('Sunucuya ulaşılamadı.', error)
   return (data as CloudTournament | null) ?? null
 }
 
 export async function deleteTournament(id: string, adminSecret: string): Promise<boolean> {
   const { data, error } = await db().rpc('delete_tournament', { p_id: id, p_admin_secret: adminSecret })
-  if (error) fail('Turnuva silinemedi. İnternet bağlantını kontrol et.', error)
+  if (error) fail('Turnuva silinemedi.', error)
   return data === true
+}
+
+/** Hakem şifresini doğrular (yanlış denemeler sunucuda sayılır, 10'da kilitlenir). */
+export async function verifyAdminPin(code: string, pin: string): Promise<{ ok: boolean; locked: boolean; hasPin: boolean }> {
+  const { data, error } = await db().rpc('verify_admin_pin', { p_code: code, p_pin: pin })
+  if (error) fail('Şifre kontrol edilemedi.', error)
+  return data as { ok: boolean; locked: boolean; hasPin: boolean }
 }
 
 export async function fetchResults(tournamentId: string): Promise<Results> {
