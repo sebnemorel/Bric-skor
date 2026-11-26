@@ -801,6 +801,7 @@ export default function Tournament() {
         onChangeTable={() => setView({ kind: 'pickTable' })}
         onShowAll={() => setMyTable(undefined)}
         onEditPair={(side, number) => setView({ kind: 'editPair', side, number, from: 'round' })}
+        onLeave={() => replace(null)}
         codeBox={
           tournament.cloud && (
             <Card className="pt-1">

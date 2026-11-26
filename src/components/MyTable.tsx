@@ -54,7 +54,7 @@ export function TablePicker({ tournament, m, onPick, onAll }: {
 
 // ---------------- Masam ekranı ----------------
 
-export function MyTableView({ tournament, m, table, openBoard, openStandings, onChangeTable, onShowAll, onEditPair, codeBox }: {
+export function MyTableView({ tournament, m, table, openBoard, openStandings, onChangeTable, onShowAll, onEditPair, onLeave, codeBox }: {
   tournament: Tournament
   m: Movement
   table: number
@@ -63,6 +63,7 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
   openStandings: () => void
   onChangeTable: () => void
   onShowAll: () => void
+  onLeave: () => void
   codeBox?: React.ReactNode
 }) {
   const auto = currentRound(m, tournament.results, table)
@@ -234,6 +235,22 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
           Tüm masalar
         </button>
       </div>
+
+      <button
+        type="button"
+        className="h-11 w-full rounded-2xl text-sm font-medium text-red-700"
+        onClick={() => {
+          const isAdmin = Boolean(tournament.cloud?.adminSecret)
+          const msg = !tournament.cloud
+            ? 'Bu turnuva ve girilen tüm skorlar bu telefondan silinecek. Emin misin?'
+            : isAdmin
+              ? 'Turnuva silinmez, kodla tekrar katılabilirsin. Ama turnuvayı silme yetkin bu telefondan kalkar. Çıkılsın mı?'
+              : 'Turnuvadan çıkılsın mı? Skorlar silinmez, kodla tekrar katılabilirsin.'
+          if (window.confirm(msg)) onLeave()
+        }}
+      >
+        Turnuvadan çık
+      </button>
     </div>
   )
 }
