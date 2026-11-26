@@ -21,7 +21,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 - [x] Masa ekranı ve skor girişi (pas, düzeltme, silme; skorlar cihazda saklanır)
 - [x] Matchpoint hesaplama, K-G / D-B sıralaması ve board detayları
 - [ ] IMP hesaplama
-- [ ] Çoklu cihaz (gerçek zamanlı senkronizasyon)
+- [x] Çoklu cihaz: 6 haneli turnuva kodu, her masa kendi telefonundan girer, canlı sıralama, internetsizken bekletme (Supabase)
 - [x] PWA (telefona kurulabilir, internetsiz çalışır)
 - [x] Her tarayıcı için kurulum yardımı (Safari, Samsung Internet, Firefox, telefonun kendi tarayıcısı)
 - [ ] Android uygulaması (Play Store)
@@ -34,6 +34,15 @@ npm run dev     # geliştirme sunucusu
 npm test        # puan hesaplama testleri
 npm run build   # yayın için derleme
 ```
+
+## Çoklu cihaz kurulumu (Supabase)
+
+1. [supabase.com](https://supabase.com)'da ücretsiz bir proje aç.
+2. SQL Editor'de `supabase/schema.sql` dosyasının tamamını çalıştır.
+3. `.env.example` dosyasını `.env.local` adıyla kopyala, Project URL ve publishable key'i yaz.
+4. Vercel'de aynı iki değişkeni (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) Environment Variables'a ekle.
+
+Bu değişkenler yoksa uygulama "sadece bu telefon" modunda çalışmaya devam eder.
 
 ## Proje yapısı
 
@@ -50,6 +59,14 @@ src/
     standings.ts       # matchpoint ve sıralama
     standings.test.ts
     storage.ts         # turnuvayı tarayıcıya kaydetme
+  cloud/
+    api.ts             # Supabase istekleri (turnuva kur/katıl/sil, skor gönder, canlı dinle)
+    sync.ts            # satır dönüşümü, bekleyen değişikliklerin birleştirilmesi
+    sync.test.ts
+    useCloudSync.ts    # turnuvayı canlı tutan React kancası
+  install/
+    browser.ts         # tarayıcı algılama ve kurulum talimatları
+    InstallBanner.tsx  # "Telefona kur" banner'ı
   components/
     ContractForm.tsx   # kontrat / deklaran / sonuç seçimi (ortak)
     Calculator.tsx     # skor hesaplayıcı ekranı
@@ -61,4 +78,4 @@ src/
 
 ## Teknolojiler
 
-React, TypeScript, Vite, Tailwind CSS, Vitest, vite-plugin-pwa (Workbox), Vercel
+React, TypeScript, Vite, Tailwind CSS, Vitest, vite-plugin-pwa (Workbox), Supabase (Postgres + Realtime), Vercel

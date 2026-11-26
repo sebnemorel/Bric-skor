@@ -1,6 +1,13 @@
 // Turnuvayı tarayıcının localStorage'ına kaydeder.
-// Şimdilik tek cihaz için; çoklu cihaz aşamasında burası veritabanıyla değişecek.
+// Bulut turnuvalarında da bir kopya burada tutulur: internet giderse uygulama çalışmaya devam eder.
+import type { Pending } from '../cloud/sync'
 import type { Results } from './results'
+
+export interface CloudInfo {
+  id: string // veritabanındaki turnuva kimliği
+  code: string // 6 haneli katılım kodu
+  adminSecret?: string // sadece turnuvayı kuran cihazda bulunur
+}
 
 export interface Tournament {
   name: string
@@ -9,6 +16,8 @@ export interface Tournament {
   boardsPerRound: number
   createdAt: number
   results: Results
+  cloud?: CloudInfo // yoksa turnuva sadece bu telefonda
+  pending?: Pending // buluta henüz gönderilemeyen değişiklikler
 }
 
 const KEY = 'bric-skor:tournament'

@@ -3,9 +3,14 @@
 ## Sıradaki
 
 - [ ] **5. aşama: Çoklu cihaz**
-  - Her masa kendi telefonundan skor girsin, sonuçlar ortak veritabanında (Supabase) toplansın.
-  - Turnuva kodu ile masaya katılma, canlı sıralama.
-  - Aynı boarda iki kişi aynı anda girerse ne olacağı.
+  - [x] Supabase projesi ve veritabanı şeması (`supabase/schema.sql`)
+  - [x] Turnuva kur → 6 haneli kod; kodla / linkle katıl
+  - [x] Skorlar ortak veritabanına; internet yokken telefonda bekler, gelince gönderilir
+  - [x] Aynı boarda iki giriş → son giren geçerli
+  - [ ] Gerçek Supabase ile iki telefonda canlı deneme ("Canlı" durumu, anlık güncelleme)
+  - [ ] "Masam" modu: masadaki telefon sadece kendi masasını ve sıradaki boardları görsün
+
+## İyileştirmeler (ana plan bitince)
 
 - [ ] **Tarayıcılarda yükleme kısmına detaylı bakılacak**
   - Her tarayıcıda "Telefona kur" akışını gerçek telefonda tek tek dene:
@@ -27,7 +32,8 @@
 
 ## Notlar
 
-- Skorlar şu an sadece girildiği cihazda saklanıyor; başka telefon göremez (5. aşamada çözülecek).
+- "Diğer telefonlarla paylaş" kapalı kurulan turnuvalar sadece o telefonda kalır.
+- Supabase ücretsiz planda 1 hafta kullanılmayan proje uyutulur; panelden tek tıkla uyandırılır.
 - Kulüpte gerçek turnuvada paralel deneme yap, hataları ve eksikleri buraya ekle.
 
 ## Tamamlananlar

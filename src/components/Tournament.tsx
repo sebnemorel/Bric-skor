@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import { cloudEnabled, createTournament, deleteTournament, joinTournament, newAdminSecret } from '../cloud/api'
+import { isValidCode, normalizeCode } from '../cloud/sync'
+import { useCloudSync, type SyncStatus } from '../cloud/useCloudSync'
 import { MAX_PAIRS, MIN_PAIRS, mitchell, type Movement } from '../tournament/movement'
 import {
   DEFAULT_ENTRY,
@@ -53,10 +56,15 @@ function signed(n: number) {
 
 // ---------------- Kurulum formu ----------------
 
-function Setup({ onCreate }: { onCreate: (t: T) => void }) {
+type NewTournament = Pick<T, 'name' | 'date' | 'pairCount' | 'boardsPerRound'>
+
+function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => Promise<void> }) {
   const [name, setName] = useState('Kulüp Turnuvası')
   const [pairCount, setPairCount] = useState(12)
   const [boardsPerRound, setBoardsPerRound] = useState(3)
+  const [shared, setShared] = useState(cloudEnabled)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const m = mitchell(pairCount, boardsPerRound)
   const roundCount = m.rounds.length
@@ -105,38 +113,198 @@ function Setup({ onCreate }: { onCreate: (t: T) => void }) {
         )}
       </Card>
 
+      {cloudEnabled && (
+        <Card>
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-5 w-5 accent-emerald-700"
+              checked={shared}
+              onChange={e => setShared(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Diğer telefonlarla paylaş</span>
+              <span className="block text-sm text-slate-500">
+                Turnuvaya bir kod verilir; her masa kendi telefonundan skor girer, sıralama canlı güncellenir.
+                İnternet gerekir.
+              </span>
+            </span>
+          </label>
+        </Card>
+      )}
+
+      {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
       <button
         type="button"
         className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white disabled:opacity-40"
-        disabled={!name.trim()}
-        onClick={() =>
-          onCreate({
-            name: name.trim(),
-            date: new Date().toLocaleDateString('tr-TR'),
-            pairCount,
-            boardsPerRound,
-            createdAt: Date.now(),
-            results: {},
-          })
-        }
+        disabled={!name.trim() || busy}
+        onClick={async () => {
+          setBusy(true)
+          setError(null)
+          try {
+            await onCreate(
+              { name: name.trim(), date: new Date().toLocaleDateString('tr-TR'), pairCount, boardsPerRound },
+              shared,
+            )
+          } catch (e) {
+            setError(
+              `${(e as Error).message} İstersen "Diğer telefonlarla paylaş" seçeneğini kapatıp turnuvayı sadece bu telefonda kurabilirsin.`,
+            )
+            setBusy(false)
+          }
+        }}
       >
-        Turnuvayı oluştur
+        {busy ? 'Oluşturuluyor…' : 'Turnuvayı oluştur'}
       </button>
+    </div>
+  )
+}
+
+// ---------------- Kodla katılma ----------------
+
+function Join({ initialCode, onJoin }: { initialCode: string; onJoin: (code: string) => Promise<void> }) {
+  const [code, setCode] = useState(normalizeCode(initialCode))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  return (
+    <div className="space-y-4">
+      <Card className="space-y-3">
+        <label className="block">
+          <span className="text-sm font-medium text-slate-500">Turnuva kodu</span>
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-3xl font-bold uppercase tracking-[0.3em]"
+            value={code}
+            onChange={e => {
+              setCode(normalizeCode(e.target.value))
+              setError(null)
+            }}
+            placeholder="KX4P92"
+            autoCapitalize="characters"
+            autoComplete="off"
+            inputMode="text"
+          />
+        </label>
+        <p className="text-sm text-slate-500">Kodu turnuvayı kuran kişiden al. 6 karakterdir.</p>
+      </Card>
+
+      {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
+      <button
+        type="button"
+        className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white disabled:opacity-40"
+        disabled={!isValidCode(code) || busy}
+        onClick={async () => {
+          setBusy(true)
+          setError(null)
+          try {
+            await onJoin(code)
+          } catch (e) {
+            setError((e as Error).message)
+            setBusy(false)
+          }
+        }}
+      >
+        {busy ? 'Katılınıyor…' : 'Katıl'}
+      </button>
+    </div>
+  )
+}
+
+function Start({ onCreate, onJoin }: {
+  onCreate: (t: NewTournament, shared: boolean) => Promise<void>
+  onJoin: (code: string) => Promise<void>
+}) {
+  const initialCode = new URLSearchParams(window.location.search).get('kod') ?? ''
+  const [mode, setMode] = useState<'create' | 'join'>(initialCode ? 'join' : 'create')
+
+  if (!cloudEnabled) return <Setup onCreate={onCreate} />
+
+  return (
+    <div className="space-y-4">
+      <nav className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm">
+        {(['create', 'join'] as const).map(id => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setMode(id)}
+            className={`h-10 rounded-xl text-sm font-medium ${mode === id ? 'bg-slate-800 text-white' : 'text-slate-600'}`}
+          >
+            {id === 'create' ? 'Yeni turnuva kur' : 'Kodla katıl'}
+          </button>
+        ))}
+      </nav>
+      {mode === 'create' ? <Setup onCreate={onCreate} /> : <Join initialCode={initialCode} onJoin={onJoin} />}
+    </div>
+  )
+}
+
+// ---------------- Kod ve bağlantı durumu ----------------
+
+const STATUS_TEXT: Record<SyncStatus, { dot: string; text: string }> = {
+  local: { dot: 'bg-slate-400', text: 'Sadece bu telefonda' },
+  connecting: { dot: 'bg-amber-400', text: 'Bağlanıyor…' },
+  live: { dot: 'bg-emerald-500', text: 'Canlı · skorlar herkesle paylaşılıyor' },
+  offline: { dot: 'bg-red-500', text: 'Bağlantı yok' },
+}
+
+function CodeBox({ tournament, status, pendingCount }: { tournament: T; status: SyncStatus; pendingCount: number }) {
+  const [copied, setCopied] = useState(false)
+  const code = tournament.cloud!.code
+  const link = `${window.location.origin}/?kod=${code}`
+
+  const share = async () => {
+    const text = `${tournament.name} turnuvasına katıl. Kod: ${code}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Briç Skor', text, url: link })
+        return
+      }
+      await navigator.clipboard.writeText(`${text}\n${link}`)
+      setCopied(true)
+    } catch {
+      // paylaşım iptal edildi
+    }
+  }
+
+  const st = STATUS_TEXT[status]
+  return (
+    <div className="mt-3 rounded-xl bg-slate-50 p-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs text-slate-500">Turnuva kodu</div>
+          <div className="font-mono text-2xl font-bold tracking-[0.2em]">{code}</div>
+        </div>
+        <button type="button" onClick={share} className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">
+          {copied ? 'Kopyalandı ✓' : 'Paylaş'}
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+        <span className={`h-2 w-2 rounded-full ${st.dot}`} />
+        {st.text}
+        {pendingCount > 0 && <span className="text-amber-700">· {pendingCount} skor gönderilmeyi bekliyor</span>}
+      </div>
     </div>
   )
 }
 
 // ---------------- Tur tablosu ----------------
 
-function RoundView({ tournament, m, round, setRound, openTable, openStandings, onReset }: {
+function RoundView({ tournament, m, round, setRound, openTable, openStandings, onLeave, onDelete, status, pendingCount }: {
   tournament: T
   m: Movement
   round: number
   setRound: (r: number) => void
   openTable: (table: number) => void
   openStandings: () => void
-  onReset: () => void
+  onLeave: () => void
+  onDelete: () => void
+  status: SyncStatus
+  pendingCount: number
 }) {
+  const isCloud = Boolean(tournament.cloud)
+  const isAdmin = Boolean(tournament.cloud?.adminSecret)
   const assignments = m.rounds[round - 1]
   const entered = Object.keys(tournament.results).length
   const expected = m.rounds.flat().filter(a => a.ew !== null).length * m.boardsPerRound
@@ -153,6 +321,7 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
           <div className="h-full bg-emerald-600" style={{ width: `${(entered / expected) * 100}%` }} />
         </div>
         <div className="mt-1 text-xs text-slate-500">{entered} / {expected} skor girildi</div>
+        {isCloud && <CodeBox tournament={tournament} status={status} pendingCount={pendingCount} />}
         <button
           type="button"
           onClick={openStandings}
@@ -218,15 +387,42 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
         {m.type === 'skip-mitchell' && ` ${Math.floor(m.tables / 2) + 1}. turda D-B çiftleri bir masa atlar.`}
       </p>
 
-      <button
-        type="button"
-        className="h-12 w-full rounded-2xl border border-red-200 bg-white font-medium text-red-700"
-        onClick={() => {
-          if (window.confirm('Bu turnuva ve girilen tüm skorlar silinecek. Emin misin?')) onReset()
-        }}
-      >
-        Yeni turnuva kur
-      </button>
+      {!isCloud && (
+        <button
+          type="button"
+          className="h-12 w-full rounded-2xl border border-red-200 bg-white font-medium text-red-700"
+          onClick={() => {
+            if (window.confirm('Bu turnuva ve girilen tüm skorlar silinecek. Emin misin?')) onLeave()
+          }}
+        >
+          Yeni turnuva kur
+        </button>
+      )}
+      {isAdmin && (
+        <button
+          type="button"
+          className="h-12 w-full rounded-2xl border border-red-200 bg-white font-medium text-red-700"
+          onClick={() => {
+            if (window.confirm('Turnuva ve tüm skorlar HERKES İÇİN silinecek. Bu geri alınamaz. Emin misin?')) onDelete()
+          }}
+        >
+          Turnuvayı herkes için sil
+        </button>
+      )}
+      {isCloud && (
+        <button
+          type="button"
+          className="h-11 w-full rounded-2xl bg-white text-sm font-medium text-slate-600"
+          onClick={() => {
+            const msg = isAdmin
+              ? 'Turnuva silinmez, kodla tekrar katılabilirsin. Ama turnuvayı silme yetkin bu telefondan kalkar. Çıkılsın mı?'
+              : 'Turnuvadan çıkılsın mı? Skorlar silinmez, kodla tekrar katılabilirsin.'
+            if (window.confirm(msg)) onLeave()
+          }}
+        >
+          Bu telefondan çık
+        </button>
+      )}
     </div>
   )
 }
@@ -346,24 +542,46 @@ export default function Tournament() {
   const [tournament, setTournament] = useState<T | null>(() => loadTournament())
   const [round, setRound] = useState(1)
   const [view, setView] = useState<View>({ kind: 'round' })
+  const sync = useCloudSync(tournament, setTournament)
 
   const m = useMemo(
     () => (tournament ? mitchell(tournament.pairCount, tournament.boardsPerRound) : null),
     [tournament],
   )
 
-  const update = (t: T | null) => {
+  const replace = (t: T | null) => {
     saveTournament(t)
     setTournament(t)
+    setRound(1)
+    setView({ kind: 'round' })
+    // paylaşılan linkteki ?kod= kısmını adres çubuğundan temizle
+    if (window.location.search) window.history.replaceState(null, '', window.location.pathname)
   }
 
   if (!tournament || !m) {
     return (
-      <Setup
-        onCreate={t => {
-          update(t)
-          setRound(1)
-          setView({ kind: 'round' })
+      <Start
+        onCreate={async (input, shared) => {
+          const t: T = { ...input, createdAt: Date.now(), results: {} }
+          if (shared && cloudEnabled) {
+            const adminSecret = newAdminSecret()
+            const { id, code } = await createTournament({ ...input, adminSecret })
+            t.cloud = { id, code, adminSecret }
+          }
+          replace(t)
+        }}
+        onJoin={async code => {
+          const ct = await joinTournament(code)
+          if (!ct) throw new Error('Bu kodla bir turnuva bulunamadı. Kodu kontrol et.')
+          replace({
+            name: ct.name,
+            date: ct.date,
+            pairCount: ct.pairCount,
+            boardsPerRound: ct.boardsPerRound,
+            createdAt: Date.now(),
+            results: {},
+            cloud: { id: ct.id, code: ct.code },
+          })
         }}
       />
     )
@@ -400,13 +618,11 @@ export default function Tournament() {
         board={view.board}
         back={backToTable}
         save={entry => {
-          update({ ...tournament, results: { ...tournament.results, [key]: makeResult(a, round, view.board, entry) } })
+          sync.setResult(view.board, a.ns, makeResult(a, round, view.board, entry))
           backToTable()
         }}
         remove={() => {
-          const results = { ...tournament.results }
-          delete results[key]
-          update({ ...tournament, results })
+          sync.setResult(view.board, a.ns, null)
           backToTable()
         }}
       />
@@ -421,7 +637,20 @@ export default function Tournament() {
       setRound={setRound}
       openTable={table => setView({ kind: 'table', table })}
       openStandings={() => setView({ kind: 'standings' })}
-      onReset={() => update(null)}
+      onLeave={() => replace(null)}
+      onDelete={async () => {
+        const c = tournament.cloud
+        if (!c?.adminSecret) return
+        try {
+          const ok = await deleteTournament(c.id, c.adminSecret)
+          if (!ok) window.alert('Turnuva sunucuda bulunamadı ya da zaten silinmiş.')
+          replace(null)
+        } catch (e) {
+          window.alert((e as Error).message)
+        }
+      }}
+      status={sync.status}
+      pendingCount={sync.pendingCount}
     />
   )
 }
