@@ -10,12 +10,14 @@ import { BackButton, Card, ScoreBoxes } from './ui'
 
 type Slot = { round: number; table: number; ns: number }
 
-export default function MasterEditor({ tournamentId, name, m, results, password, onResults, back }: {
+export default function MasterEditor({ tournamentId, name, m, results, password, getAnswer, onResults, back }: {
   tournamentId: string
   name: string
   m: Movement
   results: Results
   password: string
+  /** Güvenlik sorusunun cevabı (gerekirse sorar); vazgeçilirse null. */
+  getAnswer: () => Promise<string | null>
   onResults: (r: Results) => void
   back: () => void
 }) {
@@ -30,12 +32,14 @@ export default function MasterEditor({ tournamentId, name, m, results, password,
     const a = m.rounds[s.round - 1][s.table - 1]
     const key = resultKey(board, a.ns)
     const r = value ? makeResult(a, s.round, board, value) : null
-    setBusy(true)
     setError(null)
+    const answer = await getAnswer()
+    if (answer === null) return
+    setBusy(true)
     try {
-      const ok = await masterWriteResult(tournamentId, password, board, a.ns, r)
+      const ok = await masterWriteResult(tournamentId, password, answer, board, a.ns, r)
       if (!ok) {
-        setError('Kaydedilemedi: yönetici parolası kabul edilmedi.')
+        setError('Kaydedilemedi: yönetici parolası ya da güvenlik cevabı kabul edilmedi.')
         return
       }
       const next = { ...results }

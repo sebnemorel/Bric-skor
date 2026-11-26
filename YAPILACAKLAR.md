@@ -60,3 +60,4 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Rakip onayı ve skor kilidi (hakem / yönetici düzeltmesi)
 - [x] Yeşil/kırmızı seçeneği (seçilmezse yeşil)
 - [x] Onaydan sonra diğer masaların sonuçları / sonraki board
+- [x] Yönetici değişikliklerinde güvenlik sorusu

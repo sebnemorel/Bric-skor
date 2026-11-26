@@ -5,6 +5,7 @@ import { adminDeleteTournament, fetchPairs, fetchResults, listArchive, verifyMas
 import { createMovement } from '../tournament/movement'
 import type { Tournament } from '../tournament/storage'
 import MasterEditor from './MasterEditor'
+import SecurityQuestion from './SecurityQuestion'
 import Standings from './Standings'
 import { Card } from './ui'
 
@@ -84,6 +85,25 @@ export default function Archive() {
   const [master, setMaster] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
   const [editing, setEditing] = useState(false)
+  // Güvenlik cevabı: ilk kayıtta sorulur, bu oturum boyunca bellekte kalır (Çıkış'ta unutulur)
+  const [answer, setAnswer] = useState<string | null>(null)
+  const [asking, setAsking] = useState<((a: string | null) => void) | null>(null)
+  const getAnswer = () =>
+    answer !== null ? Promise.resolve(answer) : new Promise<string | null>(resolve => setAsking(() => resolve))
+  const logout = (m: string | null) => {
+    setMaster(m)
+    if (m === null) setAnswer(null)
+  }
+  const question = master && asking && (
+    <SecurityQuestion
+      password={master}
+      onDone={a => {
+        if (a !== null) setAnswer(a)
+        asking(a)
+        setAsking(null)
+      }}
+    />
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -98,11 +118,13 @@ export default function Archive() {
   const remove = async (e: ArchiveEntry) => {
     if (!master) return
     if (!window.confirm(`"${e.name}" (${e.date}) turnuvası skorları ve isimleriyle birlikte kalıcı olarak silinsin mi?`)) return
+    const a = await getAnswer()
+    if (a === null) return
     try {
-      const ok = await adminDeleteTournament(e.id, master)
+      const ok = await adminDeleteTournament(e.id, master, a)
       if (!ok) {
-        setError('Silinemedi: parola artık geçerli değil ya da turnuva zaten silinmiş.')
-        setMaster(null)
+        setError('Silinemedi: parola/güvenlik cevabı artık geçerli değil ya da turnuva zaten silinmiş.')
+        logout(null)
       }
       setReload(r => r + 1)
     } catch (err) {
@@ -115,15 +137,19 @@ export default function Archive() {
     const m = createMovement(t.pairCount, t.boardsPerRound, t.movement)
     if (editing && master) {
       return (
-        <MasterEditor
-          tournamentId={open.entry.id}
-          name={t.name}
-          m={m}
-          results={t.results}
-          password={master}
-          onResults={results => setOpen({ ...open, tournament: { ...t, results } })}
-          back={() => setEditing(false)}
-        />
+        <>
+          <MasterEditor
+            tournamentId={open.entry.id}
+            name={t.name}
+            m={m}
+            results={t.results}
+            password={master}
+            getAnswer={getAnswer}
+            onResults={results => setOpen({ ...open, tournament: { ...t, results } })}
+            back={() => setEditing(false)}
+          />
+          {question}
+        </>
       )
     }
     return (
@@ -239,7 +265,8 @@ export default function Archive() {
         </section>
       )}
 
-      {cloudAdminBar(master, setMaster)}
+      {cloudAdminBar(master, logout)}
+      {question}
     </div>
   )
 }

@@ -114,3 +114,16 @@ Skor girilince telefon rakip çifte verilir; rakip kontrat, oynayan, yeşil/kır
 kontrol edip **Onayla**'ya basar. Onaylı skoru oyuncular değiştiremez (sunucu da engeller).
 Turnuva açıkken sadece hakem, bittikten sonra sadece kulüp yöneticisi parolasıyla (Arşiv → Skorları düzelt)
 değiştirilebilir. Yeşil/kırmızı seçilmezse herkes yeşil sayılır.
+
+## Güvenlik sorusu
+
+Yönetici değişiklikleri (turnuva silme, skor düzeltme) kaydedilmeden önce güvenlik sorusu sorulur
+("Hakemin ilk evcil hayvanının adı nedir?"). Büyük/küçük harf önemsizdir. Cevap bu depoda **yoktur**;
+`09_security_question.sql` çalıştırıldıktan sonra Supabase SQL Editor'de şu komutla ayarlanır
+(`CEVAP` yerine cevabı yaz):
+
+```sql
+update public.app_admin
+set answer_hash = extensions.crypt(public.norm_answer('CEVAP'), extensions.gen_salt('bf')), failures = 0
+where id = 1;
+```

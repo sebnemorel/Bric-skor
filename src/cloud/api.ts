@@ -143,9 +143,16 @@ export async function verifyMaster(password: string): Promise<{ ok: boolean; loc
   return data as { ok: boolean; locked: boolean; configured: boolean }
 }
 
-/** Yönetici parolasıyla arşivdeki herhangi bir turnuvayı siler. */
-export async function adminDeleteTournament(id: string, password: string): Promise<boolean> {
-  const { data, error } = await db().rpc('admin_delete_tournament', { p_id: id, p_password: password })
+/** Güvenlik sorusu: parola + cevap doğru mu? (yanlışlar sunucuda sayılır) */
+export async function verifyMasterAnswer(password: string, answer: string): Promise<{ ok: boolean; locked: boolean; configured: boolean }> {
+  const { data, error } = await db().rpc('verify_master_answer', { p_password: password, p_answer: answer })
+  if (error) fail('Cevap kontrol edilemedi.', error)
+  return data as { ok: boolean; locked: boolean; configured: boolean }
+}
+
+/** Yönetici parolası + güvenlik cevabıyla arşivdeki herhangi bir turnuvayı siler. */
+export async function adminDeleteTournament(id: string, password: string, answer: string): Promise<boolean> {
+  const { data, error } = await db().rpc('admin_delete_tournament', { p_id: id, p_password: password, p_answer: answer })
   if (error) fail('Turnuva silinemedi.', error)
   return data === true
 }
@@ -186,10 +193,18 @@ export async function adminWriteResult(tournamentId: string, secret: string, boa
 }
 
 /** Kulüp yöneticisi: her zaman (bitmiş turnuvada da) herhangi bir skoru yazar (r = null → siler). */
-export async function masterWriteResult(tournamentId: string, password: string, board: number, ns: number, r: BoardResult | null): Promise<boolean> {
+export async function masterWriteResult(
+  tournamentId: string,
+  password: string,
+  answer: string,
+  board: number,
+  ns: number,
+  r: BoardResult | null,
+): Promise<boolean> {
   const { data, error } = await db().rpc('master_write_result', {
     p_id: tournamentId,
     p_password: password,
+    p_answer: answer,
     p_board: board,
     p_ns: ns,
     p_row: r ? toRow(tournamentId, r, deviceId()) : null,
