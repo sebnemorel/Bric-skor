@@ -32,6 +32,7 @@ import {
 } from '../tournament/results'
 import { loadTournament, saveTournament, type Tournament as T } from '../tournament/storage'
 import { BoardMeta } from './BoardHeader'
+import { BoardAllResults, ResultSummary } from './BoardResultViews'
 import ContractForm from './ContractForm'
 import { MyTableView, TablePicker } from './MyTable'
 import { PairEditor, PairsView } from './Pairs'
@@ -688,7 +689,7 @@ function TableView({ tournament, m, round, table, back, openBoard }: {
               </div>
               {r ? (
                 <div className="text-right">
-                  <div className="font-medium">{formatResult(r)}</div>
+                  <div className="font-medium">{r.confirmed && <span className="mr-1 text-xs">🔒</span>}{formatResult(r)}</div>
                   <div className="text-sm text-slate-500">K-G {signed(r.nsScore)}</div>
                 </div>
               ) : (
@@ -703,50 +704,165 @@ function TableView({ tournament, m, round, table, back, openBoard }: {
 }
 
 // ---------------- Board skor girişi ----------------
+//
+// Bridgemate mantığı: skor girilir → telefon rakibe verilir, rakip kontrol edip onaylar →
+// skor kaydedilir ve kilitlenir (sadece hakem değiştirebilir) → diğer masalar / sonraki board.
 
-function BoardEntry({ tournament, m, round, table, board, back, save, remove }: {
+type Step = 'enter' | 'confirm' | 'done' | 'others'
+
+function BoardEntry({ tournament, m, round, table, board, isAdmin, back, save, remove, next }: {
   tournament: T
   m: Movement
   round: number
   table: number
   board: number
+  isAdmin: boolean
   back: () => void
   save: (entry: ContractEntry) => void
   remove: () => void
+  /** Bu masada sıradaki girilmemiş board; yoksa null. */
+  next: (() => void) | null
 }) {
   const a = m.rounds[round - 1][table - 1]
   const existing = tournament.results[resultKey(board, a.ns)]
+  const locked = Boolean(existing?.confirmed) && !isAdmin
   const [entry, setEntry] = useState<ContractEntry>(() => (existing ? resultToEntry(existing) : DEFAULT_ENTRY))
+  const [step, setStep] = useState<Step>(locked ? 'done' : 'enter')
+  const [justSaved, setJustSaved] = useState(false)
 
+  const nsLabel = `K-G ${a.ns}`
+  const ewLabel = `D-B ${a.ew}`
+  const header = (
+    <Card className="text-center">
+      <div className="text-sm text-slate-500">Masa {table} · K-G {a.ns} vs D-B {a.ew}</div>
+      <div className="text-3xl font-bold">Board {board}</div>
+      <div className="text-xs text-slate-500"><BoardMeta board={board} /></div>
+    </Card>
+  )
+  const nextButton = (
+    <button
+      type="button"
+      className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white"
+      onClick={() => (next ? next() : back())}
+    >
+      {next ? 'Sonraki boarda geç ›' : 'Masaya dön'}
+    </button>
+  )
+
+  if (step === 'confirm') {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setStep('enter')}>Düzelt</BackButton>
+        {header}
+        <Card className="bg-amber-50 text-sm text-amber-900">
+          📱 Telefonu <b>rakip çifte</b> verin. Kontrat, oynayan, yeşil/kırmızı, sonuç ve puan doğruysa onaylasın.
+          Onaydan sonra skoru sadece hakem değiştirebilir.
+        </Card>
+        <ResultSummary entry={entry} nsScore={entryScore(entry)} nsLabel={nsLabel} ewLabel={ewLabel} />
+        <div className="grid grid-cols-[1fr_2fr] gap-2">
+          <button
+            type="button"
+            className="h-14 rounded-2xl border border-slate-300 bg-white font-semibold text-slate-700"
+            onClick={() => setStep('enter')}
+          >
+            Yanlış, düzelt
+          </button>
+          <button
+            type="button"
+            className="h-14 rounded-2xl bg-emerald-700 text-lg font-semibold text-white"
+            onClick={() => {
+              save(entry)
+              setJustSaved(true)
+              setStep('done')
+            }}
+          >
+            ✓ Onayla
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'done' && existing) {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={back}>Masa {table}</BackButton>
+        {header}
+        <Card className={`text-center text-sm ${justSaved ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600'}`}>
+          {justSaved ? '✓ Onaylandı ve kaydedildi.' : '🔒 Bu skor onaylandı.'} Değişiklik gerekirse hakeme söyleyin.
+        </Card>
+        <ResultSummary entry={resultToEntry(existing)} nsScore={existing.nsScore} nsLabel={nsLabel} ewLabel={ewLabel} />
+        <button
+          type="button"
+          className="h-14 w-full rounded-2xl border border-emerald-700 bg-white text-lg font-semibold text-emerald-800"
+          onClick={() => setStep('others')}
+        >
+          Diğer masaların sonuçlarını gör
+        </button>
+        {nextButton}
+        {isAdmin && (
+          <button type="button" className="h-11 w-full text-sm font-medium text-slate-500" onClick={() => setStep('enter')}>
+            Hakem: skoru düzelt
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  if (step === 'others' || (step === 'done' && !existing)) {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setStep('done')}>Board {board}</BackButton>
+        <Card className="text-center">
+          <div className="text-sm text-slate-500">Bütün masalar</div>
+          <div className="text-2xl font-bold">Board {board} sonuçları</div>
+        </Card>
+        <BoardAllResults m={m} results={tournament.results} board={board} highlightNs={a.ns} />
+        {nextButton}
+      </div>
+    )
+  }
+
+  // step === 'enter'
+  const adminEdit = isAdmin && Boolean(existing)
   return (
     <div className="space-y-4">
       <BackButton onClick={back}>Masa {table}</BackButton>
-
-      <Card className="text-center">
-        <div className="text-sm text-slate-500">Masa {table} · K-G {a.ns} vs D-B {a.ew}</div>
-        <div className="text-3xl font-bold">Board {board}</div>
-        <div className="text-xs text-slate-500"><BoardMeta board={board} /></div>
-      </Card>
+      {header}
 
       <ContractForm value={entry} onChange={setEntry} />
-      <ScoreBoxes nsScore={entryScore(board, entry)} />
+      <ScoreBoxes nsScore={entryScore(entry)} />
 
-      <button
-        type="button"
-        className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white"
-        onClick={() => save(entry)}
-      >
-        {existing ? 'Düzeltmeyi kaydet' : 'Kaydet'}
-      </button>
-      {existing && (
+      {adminEdit ? (
+        <>
+          <Card className="text-sm text-slate-600">🔑 Hakem düzeltmesi: rakip onayı gerekmeden kaydedilir.</Card>
+          <button
+            type="button"
+            className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white"
+            onClick={() => {
+              save(entry)
+              back()
+            }}
+          >
+            Düzeltmeyi kaydet
+          </button>
+          <button
+            type="button"
+            className="h-12 w-full rounded-2xl border border-red-200 bg-white font-medium text-red-700"
+            onClick={() => {
+              if (window.confirm(`Board ${board} skoru silinsin mi?`)) remove()
+            }}
+          >
+            Skoru sil
+          </button>
+        </>
+      ) : (
         <button
           type="button"
-          className="h-12 w-full rounded-2xl border border-red-200 bg-white font-medium text-red-700"
-          onClick={() => {
-            if (window.confirm(`Board ${board} skoru silinsin mi?`)) remove()
-          }}
+          className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white"
+          onClick={() => setStep('confirm')}
         >
-          Skoru sil
+          Rakibe onaylat ›
         </button>
       )}
     </div>
@@ -895,6 +1011,10 @@ export default function Tournament() {
     const a = m.rounds[round - 1][view.table - 1]
     const key = resultKey(view.board, a.ns)
     const backToTable = () => setView(tournament.myTable ? { kind: 'round' } : { kind: 'table', table: view.table })
+    // sıradaki girilmemiş board (önce bundan sonrakiler, sonra öncekiler)
+    const after = a.boards.filter(b => b > view.board)
+    const before = a.boards.filter(b => b < view.board)
+    const nextBoard = [...after, ...before].find(b => !tournament.results[resultKey(b, a.ns)])
     return (
       <BoardEntry
         key={key}
@@ -903,15 +1023,14 @@ export default function Tournament() {
         round={round}
         table={view.table}
         board={view.board}
+        isAdmin={!tournament.cloud || Boolean(tournament.cloud.adminSecret)}
         back={backToTable}
-        save={entry => {
-          sync.setResult(view.board, a.ns, makeResult(a, round, view.board, entry))
-          backToTable()
-        }}
+        save={entry => sync.setResult(view.board, a.ns, makeResult(a, round, view.board, entry))}
         remove={() => {
           sync.setResult(view.board, a.ns, null)
           backToTable()
         }}
+        next={nextBoard === undefined ? null : () => setView({ kind: 'board', table: view.table, board: nextBoard })}
       />
     )
   }

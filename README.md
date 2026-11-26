@@ -107,3 +107,10 @@ on conflict (id) do update set master_hash = excluded.master_hash, failures = 0;
 
 10 yanlış denemeden sonra yönetici girişi kilitlenir. Kilidi açmak için:
 `update public.app_admin set failures = 0 where id = 1;`
+
+## Skor onayı (Bridgemate mantığı)
+
+Skor girilince telefon rakip çifte verilir; rakip kontrat, oynayan, yeşil/kırmızı, sonuç ve puanı
+kontrol edip **Onayla**'ya basar. Onaylı skoru oyuncular değiştiremez (sunucu da engeller).
+Turnuva açıkken sadece hakem, bittikten sonra sadece kulüp yöneticisi parolasıyla (Arşiv → Skorları düzelt)
+değiştirilebilir. Yeşil/kırmızı seçilmezse herkes yeşil sayılır.

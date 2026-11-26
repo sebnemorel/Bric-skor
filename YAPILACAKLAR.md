@@ -57,3 +57,6 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Her tarayıcıda kurulum: "Telefona kur" banner'ı (Chrome/Edge'de tek dokunuş, diğerlerinde tarayıcıya özel talimat + "Chrome'da aç")
 - [x] Bütün turnuvalar otomatik arşivde, 24 saat sonra kendiliğinden kilit
 - [x] Kulüp yöneticisi parolasıyla arşivden turnuva silme
+- [x] Rakip onayı ve skor kilidi (hakem / yönetici düzeltmesi)
+- [x] Yeşil/kırmızı seçeneği (seçilmezse yeşil)
+- [x] Onaydan sonra diğer masaların sonuçları / sonraki board

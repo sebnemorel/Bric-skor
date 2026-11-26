@@ -20,6 +20,8 @@ export interface ResultRow {
   ns_score: number
   entered_at: string
   device_id: string | null
+  vul?: boolean | null
+  confirmed?: boolean
 }
 
 /**
@@ -43,6 +45,8 @@ export function toRow(tournamentId: string, r: BoardResult, deviceId: string): R
     ns_score: r.nsScore,
     entered_at: new Date(r.enteredAt).toISOString(),
     device_id: deviceId,
+    vul: r.vul ?? null,
+    confirmed: r.confirmed ?? false,
   }
 }
 
@@ -57,6 +61,8 @@ export function fromRow(row: ResultRow): BoardResult {
     nsScore: row.ns_score,
     enteredAt: Date.parse(row.entered_at),
   }
+  if (row.confirmed) r.confirmed = true
+  if (typeof row.vul === 'boolean') r.vul = row.vul
   if (!row.passed && row.contract && row.declarer && row.tricks !== null) {
     r.contract = row.contract
     r.declarer = row.declarer

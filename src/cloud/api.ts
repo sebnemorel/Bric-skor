@@ -67,7 +67,7 @@ export function explainError(message: string, error: unknown): string {
   const e = (error ?? {}) as { code?: string; message?: string; name?: string }
   const text = `${e.message ?? ''}`
   // Sunucu fonksiyonu tanımıyor → bir SQL güncellemesi çalıştırılmamış
-  if (e.code === 'PGRST202' || e.code === '42883' || /could not find the function/i.test(text)) {
+  if (e.code === 'PGRST202' || e.code === 'PGRST204' || e.code === '42883' || /could not find the function/i.test(text)) {
     return `${message} Sunucu güncel değil: Supabase'de supabase klasöründeki son SQL dosyası çalıştırılmamış olabilir.`
   }
   // Veritabanı kuralına takıldı (ör. geçersiz şifre, çift sayısı)
@@ -83,7 +83,7 @@ export function explainError(message: string, error: unknown): string {
 function fail(message: string, error: unknown): never {
   console.error(message, error)
   if ((error as { code?: string } | null)?.code === '42501') {
-    throw new LockedError('Turnuva bitirilmiş, skorlar kilitli.')
+    throw new LockedError('Bu skor kilitli: onaylanmış ya da turnuva bitmiş.')
   }
   throw new Error(explainError(message, error))
 }
@@ -170,6 +170,32 @@ export async function upsertResult(tournamentId: string, r: BoardResult): Promis
     .from('results')
     .upsert(toRow(tournamentId, r, deviceId()), { onConflict: 'tournament_id,board,ns' })
   if (error) fail('Skor gönderilemedi.', error)
+}
+
+/** Hakem: turnuva açıkken herhangi bir skoru yazar (r = null → siler). */
+export async function adminWriteResult(tournamentId: string, secret: string, board: number, ns: number, r: BoardResult | null): Promise<boolean> {
+  const { data, error } = await db().rpc('admin_write_result', {
+    p_id: tournamentId,
+    p_secret: secret,
+    p_board: board,
+    p_ns: ns,
+    p_row: r ? toRow(tournamentId, r, deviceId()) : null,
+  })
+  if (error) fail('Skor gönderilemedi.', error)
+  return data === true
+}
+
+/** Kulüp yöneticisi: her zaman (bitmiş turnuvada da) herhangi bir skoru yazar (r = null → siler). */
+export async function masterWriteResult(tournamentId: string, password: string, board: number, ns: number, r: BoardResult | null): Promise<boolean> {
+  const { data, error } = await db().rpc('master_write_result', {
+    p_id: tournamentId,
+    p_password: password,
+    p_board: board,
+    p_ns: ns,
+    p_row: r ? toRow(tournamentId, r, deviceId()) : null,
+  })
+  if (error) fail('Skor kaydedilemedi.', error)
+  return data === true
 }
 
 export async function deleteResult(tournamentId: string, board: number, ns: number): Promise<void> {

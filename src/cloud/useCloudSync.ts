@@ -10,7 +10,18 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { cleanPair, type PairInfo } from '../tournament/pairs'
 import { resultKey, type BoardResult } from '../tournament/results'
 import { saveTournament, type Tournament } from '../tournament/storage'
-import { cloudEnabled, deleteResult, fetchPairs, fetchResults, LockedError, subscribeResults, upsertPair, upsertResult } from './api'
+import {
+  adminWriteResult,
+  cloudEnabled,
+  deleteResult,
+  fetchPairs,
+  fetchResults,
+  joinTournament,
+  LockedError,
+  subscribeResults,
+  upsertPair,
+  upsertResult,
+} from './api'
 import { applyRemoteChange, mergeNames, mergeResults } from './sync'
 
 export type SyncStatus = 'local' | 'connecting' | 'live' | 'offline'
@@ -42,14 +53,38 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
     [setTournament],
   )
 
+  /** Sunucudaki skorları ve turnuvanın bitip bitmediğini yeniden çeker. */
+  const resync = useCallback(
+    async (cloudId: string) => {
+      try {
+        const [server, info] = await Promise.all([
+          fetchResults(cloudId),
+          ref.current?.cloud?.code ? joinTournament(ref.current.cloud.code) : Promise.resolve(null),
+        ])
+        modify(prev => ({
+          ...prev,
+          results: mergeResults(server, prev.pending ?? {}),
+          finished: prev.finished || Boolean(info?.finishedAt),
+        }))
+      } catch {
+        // bir sonraki açılışta tekrar denenir
+      }
+    },
+    [modify],
+  )
+
   /** Tek bir değişikliği sunucuya gönderir; başarılıysa bekleyenlerden çıkarır. */
   const send = useCallback(
     async (cloudId: string, key: string, value: BoardResult | null): Promise<boolean> => {
       try {
-        if (value) {
+        const [board, ns] = key.split('-').map(Number)
+        const secret = ref.current?.cloud?.adminSecret
+        if (secret) {
+          // hakem: onaylı skorları da değiştirebilir (sunucu turnuva açıksa izin verir)
+          if (!(await adminWriteResult(cloudId, secret, board, ns, value))) throw new LockedError('Hakem yetkisi kabul edilmedi.')
+        } else if (value) {
           await upsertResult(cloudId, value)
         } else {
-          const [board, ns] = key.split('-').map(Number)
           await deleteResult(cloudId, board, ns)
         }
         // bu arada aynı skor tekrar değişmediyse bekleyenlerden çıkar
@@ -63,19 +98,21 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
         return true
       } catch (e) {
         if (e instanceof LockedError) {
-          // turnuva bitirilmiş: bu değişiklik artık gönderilemez, bekleyenlerden çıkar
+          // skor kilitli (başka telefon önce onayladı ya da turnuva bitti):
+          // bu değişiklik gönderilemez; bekleyenlerden çıkar, sunucudaki doğru hali çek
           modify(prev => {
             const pending = { ...(prev.pending ?? {}) }
             delete pending[key]
-            return { ...prev, pending, finished: true }
+            return { ...prev, pending }
           })
+          void resync(cloudId)
           return true
         }
         setReachable(false)
         return false
       }
     },
-    [modify],
+    [modify, resync],
   )
 
   /** Bir çiftin isimlerini sunucuya gönderir; başarılıysa bekleyenlerden çıkarır. */

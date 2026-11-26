@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mitchell } from './movement'
 import {
+  boardSlots,
   DEFAULT_ENTRY,
   entryScore,
   formatResult,
@@ -24,7 +25,7 @@ describe('sonuç kaydı', () => {
   })
 
   it('D-B deklaranken skor negatif', () => {
-    // board 2: K-G vulnerable, D-B değil → Doğu 4♠ yaparsa D-B +420, K-G -420
+    // Doğu 4♠ yaparsa (yeşil) D-B +420, K-G -420
     expect(makeResult(t1, 1, 2, entry({ declarer: 'E' })).nsScore).toBe(-420)
   })
 
@@ -63,8 +64,26 @@ describe('sonuç kaydı', () => {
     expect(tableProgress(t1, results)).toEqual({ done: 2, total: 3 })
   })
 
-  it('entryScore board vulnerability kullanır', () => {
-    expect(entryScore(1, entry())).toBe(420) // kimse vul değil
-    expect(entryScore(2, entry())).toBe(620) // K-G vul
+  it('yeşil/kırmızı seçilmezse yeşil sayılır', () => {
+    expect(entryScore(entry())).toBe(420)
+    expect(entryScore(entry({ vul: false }))).toBe(420)
+    expect(entryScore(entry({ vul: true }))).toBe(620)
+    // D-B oynadı, kırmızı, 2 batı kontrlu → K-G +500
+    expect(entryScore(entry({ declarer: 'E', vul: true, result: -2, contract: { level: 4, strain: 'S', doubling: 'X' } }))).toBe(500)
+  })
+
+  it('kayıt rakip onaylı ve yeşil/kırmızı bilgisiyle tutulur', () => {
+    const red = makeResult(t1, 1, 1, entry({ vul: true }))
+    expect(red).toMatchObject({ confirmed: true, vul: true, nsScore: 620 })
+    expect(resultToEntry(red).vul).toBe(true)
+    const none = makeResult(t1, 1, 1, entry())
+    expect(none.vul).toBeUndefined()
+    expect(resultToEntry(none).vul).toBeNull()
+  })
+
+  it('boardSlots: board hangi masalarda oynanıyor', () => {
+    const slots = boardSlots(m, 1)
+    expect(slots.length).toBe(5) // Mitchell: her board her masada bir kez
+    expect(new Set(slots.map(s => s.a.ns)).size).toBe(5)
   })
 })

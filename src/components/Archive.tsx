@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { adminDeleteTournament, fetchPairs, fetchResults, listArchive, verifyMaster, type ArchiveEntry } from '../cloud/api'
 import { createMovement } from '../tournament/movement'
 import type { Tournament } from '../tournament/storage'
+import MasterEditor from './MasterEditor'
 import Standings from './Standings'
 import { Card } from './ui'
 
@@ -82,6 +83,7 @@ export default function Archive() {
   // Parola sadece bu oturum boyunca bellekte tutulur; sayfa kapanınca unutulur.
   const [master, setMaster] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -111,17 +113,44 @@ export default function Archive() {
   if (open) {
     const t = open.tournament
     const m = createMovement(t.pairCount, t.boardsPerRound, t.movement)
+    if (editing && master) {
+      return (
+        <MasterEditor
+          tournamentId={open.entry.id}
+          name={t.name}
+          m={m}
+          results={t.results}
+          password={master}
+          onResults={results => setOpen({ ...open, tournament: { ...t, results } })}
+          back={() => setEditing(false)}
+        />
+      )
+    }
     return (
       <Standings
         tournament={t}
         m={m}
-        back={() => setOpen(null)}
+        back={() => {
+          setOpen(null)
+          setEditing(false)
+        }}
         backLabel="Arşiv"
         banner={
-          <Card className="text-sm text-slate-500">
-            {open.entry.finishedAt ? '🏁' : '🟢'} {t.date} · {t.pairCount} çift · {kindLabel(open.entry)} ·{' '}
-            {open.entry.finishedAt ? 'Skorlar kilitli' : 'Devam ediyor (anlık görüntü)'}
-          </Card>
+          <>
+            <Card className="text-sm text-slate-500">
+              {open.entry.finishedAt ? '🏁' : '🟢'} {t.date} · {t.pairCount} çift · {kindLabel(open.entry)} ·{' '}
+              {open.entry.finishedAt ? 'Skorlar kilitli' : 'Devam ediyor (anlık görüntü)'}
+            </Card>
+            {master && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="h-12 w-full rounded-2xl bg-slate-800 font-semibold text-white"
+              >
+                🔑 Skorları düzelt (yönetici)
+              </button>
+            )}
+          </>
         }
       />
     )
