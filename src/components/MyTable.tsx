@@ -1,8 +1,8 @@
 // "Masam" modu ekranları: masa seçici ve tek masanın ekranı.
 
 import { useState } from 'react'
-import type { Movement } from '../tournament/movement'
-import { pairNames, type Side } from '../tournament/pairs'
+import { isHowell, type Movement } from '../tournament/movement'
+import { nameSide, pairNames, type Side } from '../tournament/pairs'
 import { currentRound, roundDone, seat, transition } from '../tournament/myTable'
 import { formatResult, resultKey, tableProgress } from '../tournament/results'
 import type { Tournament } from '../tournament/storage'
@@ -70,6 +70,7 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
   const round = manual ?? auto ?? m.rounds.length
   const a = seat(m, round, table)
   const finished = auto === null
+  const howell = isHowell(m)
   // Yeni tura geçildiyse ve henüz skor girilmediyse: önceki turdan bu tura nasıl geçileceğini göster
   const prevTr = round > 1 ? transition(m, round - 1, table) : null
   const prev = round > 1 ? seat(m, round - 1, table) : null
@@ -107,6 +108,20 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
       {showMove && prevTr && prev && (
         <Card className="space-y-2 border-2 border-emerald-600">
           <div className="font-bold text-emerald-800">Tur {round - 1} bitti ✓ · Masalar değişiyor</div>
+          {howell ? (
+            <ul className="space-y-1.5 text-sm">
+              <li>📦 Tur {round - 1} boardlarını ({range(prev.boards)}) kenara koy; bu turda yeni boardlar oynanır.</li>
+              {prevTr.nsTo !== null && prevTr.nsTo !== table && (
+                <li>🚶 Çift {prev.ns} <b>Masa {dative(prevTr.nsTo)}</b> geçer.</li>
+              )}
+              {prev.ew !== null && prevTr.ewTo !== null && prevTr.ewTo !== table && (
+                <li>🚶 Çift {prev.ew} <b>Masa {dative(prevTr.ewTo)}</b> geçer.</li>
+              )}
+              <li>
+                ➡️ Şimdi K-G: <b>Çift {a.ns}</b>, D-B: <b>Çift {a.ew}</b>, boardlar <b>{range(a.boards)}</b>.
+              </li>
+            </ul>
+          ) : (
           <ul className="space-y-1.5 text-sm">
             {prevTr.boardsTo !== null && prevTr.boardsTo !== table && (
               <li>📦 Tur {round - 1} boardlarını ({range(prev.boards)}) <b>Masa {dative(prevTr.boardsTo)}</b> ver.</li>
@@ -121,6 +136,7 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
               </li>
             )}
           </ul>
+          )}
         </Card>
       )}
 
@@ -142,17 +158,20 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
         <>
           <Card className="space-y-2">
             {([['NS', a.ns], ['EW', a.ew]] as const).map(([side, n]) => {
-              const label = pairNames(tournament.names, side, n)
+              const label = pairNames(tournament.names, nameSide(howell, side), n)
               return (
                 <div key={side} className="flex items-center gap-3">
                   <div className="w-14 shrink-0">
-                    <div className="text-xs text-slate-500">{side === 'NS' ? 'K-G' : 'D-B'}</div>
+                    <div className="text-xs text-slate-500">
+                      {side === 'NS' ? 'K-G' : 'D-B'}
+                      {howell && ' · Çift'}
+                    </div>
                     <div className="text-2xl font-bold leading-none">{n}</div>
                   </div>
                   <div className={`flex-1 ${label ? 'font-medium' : 'text-sm text-slate-400'}`}>{label || 'İsim girilmedi'}</div>
                   <button
                     type="button"
-                    onClick={() => onEditPair(side, n)}
+                    onClick={() => onEditPair(nameSide(howell, side), n)}
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${
                       label ? 'bg-slate-100 text-slate-600' : 'bg-emerald-700 text-white'
                     }`}
@@ -164,6 +183,11 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
             })}
             <div className="border-t border-slate-100 pt-2 text-sm text-slate-500">
               Boardlar: <b className="text-slate-900">{range(a.boards)}</b>
+              {howell && (
+                <div className="mt-1 text-xs">
+                  İki masa aynı boardları oynar: yarısını bitirince boardları diğer masayla değiştirin.
+                </div>
+              )}
             </div>
           </Card>
 

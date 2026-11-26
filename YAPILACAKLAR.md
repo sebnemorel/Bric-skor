@@ -24,7 +24,8 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 
 - [ ] Android uygulaması (Capacitor ile Play Store)
 - [ ] IMP hesaplama (takım turnuvaları için)
-- [ ] Howell hareketi (az çiftli akşamlar, 4-8 çift)
+- [ ] Howell'i 5-8 çifte genişletmek (şu an sadece 4 çift / 2 masa)
+- [ ] 3 çiftlik akşamlar (1,5 masa) için çözüm
 - [ ] Sonuçları dışa aktarma: PDF / Excel / WhatsApp'ta paylaşma
 
 ## Notlar
@@ -43,6 +44,9 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Matchpoint ve sıralama
 - [x] Canlı yayın: https://bric-skor-akdeniz.vercel.app
 - [x] Oyuncu isimleri ve kategoriler: hakem girer, çiftler düzeltebilir; sıralamada isim, kategori ve kategori filtresi
+- [x] Sabit masalar (kulübün olağan düzeni): çiftler yerinde, her masa aynı boardları oynar (36'ya kadar), K-G/D-B sıralama
+- [x] Kurulumda hareket seçimi: Sabit masalar / Howell / Mitchell
+- [x] Howell: 4 çift / 2 masa turnuva (herkes herkesle, tek sıralama)
 - [x] "Yeni sürüm hazır · Yenile" şeridi: telefondaki uygulama eski sürümde kalmaz
 - [x] Uygulama adı "Briç Skor Akdeniz" oldu (kulübün kullandığı bricskor.com ile karışmasın)
 - [x] PWA (Chrome'da kurulabilir, internetsiz çalışır)

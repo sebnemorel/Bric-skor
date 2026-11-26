@@ -1,13 +1,13 @@
 // Çift isimleri: düzenleme formu ve tüm çiftler listesi.
 
 import { useState } from 'react'
-import type { Movement } from '../tournament/movement'
+import { isHowell, pairNumbers, type Movement } from '../tournament/movement'
 import {
   CATEGORIES,
   pairCategory,
   pairKey,
+  pairLabel,
   pairNames,
-  sideLabel,
   type Category,
   type PairInfo,
   type PairNames,
@@ -17,7 +17,8 @@ import { BackButton, Card } from './ui'
 
 // ---------------- Düzenleme formu ----------------
 
-export function PairEditor({ side, number, names, onSave, back, backLabel }: {
+export function PairEditor({ howell = false, side, number, names, onSave, back, backLabel }: {
+  howell?: boolean
   side: Side
   number: number
   names: PairNames | undefined
@@ -39,7 +40,7 @@ export function PairEditor({ side, number, names, onSave, back, backLabel }: {
 
       <Card className="text-center">
         <div className="text-sm text-slate-500">Çift</div>
-        <div className="text-3xl font-bold">{sideLabel(side)} {number}</div>
+        <div className="text-3xl font-bold">{pairLabel(howell, side, number)}</div>
       </Card>
 
       <Card className="space-y-3">
@@ -90,7 +91,8 @@ export function PairEditor({ side, number, names, onSave, back, backLabel }: {
 
 // ---------------- Tüm çiftler ----------------
 
-function PairList({ side, pairs, names, openPair }: {
+function PairList({ howell, side, pairs, names, openPair }: {
+  howell: boolean
   side: Side
   pairs: number[]
   names: PairNames | undefined
@@ -99,7 +101,7 @@ function PairList({ side, pairs, names, openPair }: {
   return (
     <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
       <div className="bg-slate-50 px-4 py-2 text-xs font-semibold uppercase text-slate-500">
-        {side === 'NS' ? 'Kuzey-Güney' : 'Doğu-Batı'}
+        {howell ? 'Çiftler' : side === 'NS' ? 'Kuzey-Güney' : 'Doğu-Batı'}
       </div>
       {pairs.map(n => {
         const label = pairNames(names, side, n)
@@ -111,7 +113,7 @@ function PairList({ side, pairs, names, openPair }: {
             onClick={() => openPair(side, n)}
             className="flex w-full items-center gap-3 border-t border-slate-100 px-4 py-3 text-left active:bg-emerald-50"
           >
-            <span className="w-14 shrink-0 text-sm font-bold text-slate-500">{sideLabel(side)} {n}</span>
+            <span className="w-14 shrink-0 text-sm font-bold text-slate-500">{pairLabel(howell, side, n)}</span>
             <span className={`flex-1 ${label ? 'font-medium' : 'text-sm text-slate-400'}`}>{label || 'İsim girilmedi'}</span>
             {cat && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{cat}</span>}
             <span className="text-slate-400">›</span>
@@ -129,8 +131,8 @@ export function PairsView({ m, names, openPair, back }: {
   openPair: (side: Side, number: number) => void
   back: () => void
 }) {
-  const ns = Array.from({ length: m.tables }, (_, i) => i + 1)
-  const ew = ns.filter(n => n !== m.missingEW)
+  const howell = isHowell(m)
+  const { ns, ew } = pairNumbers(m)
   const filled = [...ns.map(n => pairNames(names, 'NS', n)), ...ew.map(n => pairNames(names, 'EW', n))].filter(Boolean).length
 
   return (
@@ -142,8 +144,8 @@ export function PairsView({ m, names, openPair, back }: {
           {filled} / {ns.length + ew.length} çiftin ismi girildi. Düzenlemek için çifte dokun.
         </div>
       </Card>
-      <PairList side="NS" pairs={ns} names={names} openPair={openPair} />
-      <PairList side="EW" pairs={ew} names={names} openPair={openPair} />
+      <PairList howell={howell} side="NS" pairs={ns} names={names} openPair={openPair} />
+      {ew.length > 0 && <PairList howell={howell} side="EW" pairs={ew} names={names} openPair={openPair} />}
     </div>
   )
 }

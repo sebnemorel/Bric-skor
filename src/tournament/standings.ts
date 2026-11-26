@@ -99,3 +99,28 @@ export function computeStandings(results: Results, nsPairs: number[], ewPairs: n
 export function rankSubset(list: Standing[], include: (pair: number) => boolean): Standing[] {
   return rank(list.filter(s => include(s.pair)).map(({ place: _place, ...rest }) => rest))
 }
+
+/**
+ * Howell gibi çiftlerin yön değiştirdiği hareketler için tek sıralama:
+ * bir çiftin K-G oturduğu boardlardaki K-G puanı + D-B oturduğu boardlardaki D-B puanı.
+ */
+export function combinedStandings(results: Results, pairs: number[]): StandingsResult {
+  const base = computeStandings(results, [], [])
+  const list = pairs.map(pair => {
+    let mp = 0
+    let top = 0
+    let count = 0
+    for (const boardResults of base.boards.values()) {
+      for (const r of boardResults) {
+        if (r.top === 0) continue
+        if (r.ns === pair) mp += r.nsMP
+        else if (r.ew === pair) mp += r.ewMP
+        else continue
+        top += r.top
+        count++
+      }
+    }
+    return { pair, mp, top, boards: count, percent: top === 0 ? 0 : Math.round((mp / top) * 10000) / 100 }
+  })
+  return { ns: rank(list), ew: [], boards: base.boards }
+}

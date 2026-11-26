@@ -2,7 +2,16 @@ import { useMemo, useState } from 'react'
 import { cloudEnabled, createTournament, deleteTournament, joinTournament, newAdminSecret } from '../cloud/api'
 import { isValidCode, normalizeCode } from '../cloud/sync'
 import { useCloudSync, type SyncStatus } from '../cloud/useCloudSync'
-import { MAX_PAIRS, MIN_PAIRS, mitchell, type Movement } from '../tournament/movement'
+import {
+  availableKinds,
+  createMovement,
+  isHowell,
+  MAX_PAIRS,
+  MAX_STATIONARY_BOARDS,
+  MIN_PAIRS,
+  type Movement,
+  type MovementKind,
+} from '../tournament/movement'
 import {
   DEFAULT_ENTRY,
   entryScore,
@@ -18,7 +27,7 @@ import { BoardMeta } from './BoardHeader'
 import ContractForm from './ContractForm'
 import { MyTableView, TablePicker } from './MyTable'
 import { PairEditor, PairsView } from './Pairs'
-import { pairNames, type Side } from '../tournament/pairs'
+import { nameSide, pairNames, type Side } from '../tournament/pairs'
 import Standings from './Standings'
 import { BackButton, Card, RoundButton, ScoreBoxes } from './ui'
 
@@ -59,19 +68,37 @@ function signed(n: number) {
 
 // ---------------- Kurulum formu ----------------
 
-type NewTournament = Pick<T, 'name' | 'date' | 'pairCount' | 'boardsPerRound'>
+type NewTournament = Pick<T, 'name' | 'date' | 'pairCount' | 'boardsPerRound' | 'movement'>
+
+const KIND_INFO: Record<MovementKind, { label: string; hint: string }> = {
+  stationary: { label: 'Sabit masalar', hint: 'Çiftler bütün akşam aynı masada kalır, her masa aynı boardları oynar' },
+  howell: { label: 'Howell', hint: 'Sadece 4 çift: herkes herkesle oynar, tek sıralama' },
+  mitchell: { label: 'Mitchell', hint: '5+ çift: K-G sabit, D-B ve boardlar her tur yer değiştirir' },
+}
 
 function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => Promise<void> }) {
   const [name, setName] = useState('Kulüp Turnuvası')
-  const [pairCount, setPairCount] = useState(12)
-  const [boardsPerRound, setBoardsPerRound] = useState(3)
+  const [pairCount, setPairCount] = useState(4)
+  const [kind, setKind] = useState<MovementKind>('stationary')
+  const [totalBoards, setTotalBoards] = useState(12) // sabit masalar
+  const [boardsPerRound, setBoardsPerRound] = useState(3) // Howell / Mitchell
   const [shared, setShared] = useState(cloudEnabled)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const m = mitchell(pairCount, boardsPerRound)
-  const roundCount = m.rounds.length
-  const minutes = roundCount * boardsPerRound * MINUTES_PER_BOARD
+  const kinds = availableKinds(pairCount)
+  const valid = kinds.includes(kind)
+  const boards = kind === 'stationary' ? totalBoards : boardsPerRound
+  const m = valid ? createMovement(pairCount, boards, kind) : null
+  const roundCount = m?.rounds.length ?? 0
+  const minutes = roundCount * boards * MINUTES_PER_BOARD
+
+  const invalidReason =
+    kind === 'stationary'
+      ? 'Sabit masalarda her masada iki çift oturur: çift sayısı çift olmalı (4, 6, 8…).'
+      : kind === 'howell'
+        ? 'Howell şimdilik sadece 4 çift (2 masa) için hazır.'
+        : 'Mitchell için en az 5 çift gerekir.'
 
   return (
     <div className="space-y-4">
@@ -85,36 +112,85 @@ function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => 
           />
         </label>
         <Stepper label="Çift sayısı" value={pairCount} min={MIN_PAIRS} max={MAX_PAIRS} onChange={setPairCount} />
-        <Stepper label="Tur başına board" value={boardsPerRound} min={1} max={8} onChange={setBoardsPerRound} />
+
+        <div>
+          <span className="text-sm font-medium text-slate-500">Hareket</span>
+          <div className="mt-1 grid grid-cols-3 gap-1.5">
+            {(['stationary', 'howell', 'mitchell'] as const).map(k => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                className={`h-11 rounded-xl border text-sm font-semibold ${
+                  kind === k
+                    ? 'border-emerald-700 bg-emerald-700 text-white'
+                    : kinds.includes(k)
+                      ? 'border-slate-300 bg-white'
+                      : 'border-slate-200 bg-white text-slate-300'
+                }`}
+              >
+                {KIND_INFO[k].label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">{KIND_INFO[kind].hint}</p>
+        </div>
+
+        {kind === 'stationary' ? (
+          <Stepper label="Toplam board" value={totalBoards} min={1} max={MAX_STATIONARY_BOARDS} onChange={setTotalBoards} />
+        ) : (
+          <Stepper label="Tur başına board" value={boardsPerRound} min={1} max={8} onChange={setBoardsPerRound} />
+        )}
       </Card>
 
-      <Card>
-        <div className="mb-2 text-sm font-medium text-slate-500">Özet</div>
-        <dl className="grid grid-cols-2 gap-y-1 text-sm">
-          <dt className="text-slate-500">Hareket</dt>
-          <dd className="text-right font-medium">{m.type === 'mitchell' ? 'Mitchell' : 'Skip Mitchell'}</dd>
-          <dt className="text-slate-500">Masa</dt>
-          <dd className="text-right font-medium">{m.tables}</dd>
-          <dt className="text-slate-500">Tur</dt>
-          <dd className="text-right font-medium">{roundCount}</dd>
-          <dt className="text-slate-500">Oynanan board</dt>
-          <dd className="text-right font-medium">{roundCount * boardsPerRound}</dd>
-          <dt className="text-slate-500">Hazırlanacak board</dt>
-          <dd className="text-right font-medium">1–{m.totalBoards}</dd>
-          <dt className="text-slate-500">Tahmini süre</dt>
-          <dd className="text-right font-medium">{formatDuration(minutes)}</dd>
-        </dl>
-        {m.missingEW !== null && (
-          <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">
-            Çift sayısı tek: D-B {m.missingEW} yok, her tur bir K-G çifti oturur.
-          </p>
-        )}
-        {m.type === 'skip-mitchell' && (
-          <p className="mt-3 rounded-lg bg-sky-50 p-2 text-sm text-sky-800">
-            Masa sayısı çift: {Math.floor(m.tables / 2) + 1}. turdan itibaren D-B çiftleri bir masa atlar.
-          </p>
-        )}
-      </Card>
+      {!m ? (
+        <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+          {invalidReason}
+          {kinds.length > 0 && ` Bu çift sayısıyla: ${kinds.map(k => KIND_INFO[k].label).join(', ')}.`}
+        </p>
+      ) : (
+        <Card>
+          <div className="mb-2 text-sm font-medium text-slate-500">Özet</div>
+          <dl className="grid grid-cols-2 gap-y-1 text-sm">
+            <dt className="text-slate-500">Hareket</dt>
+            <dd className="text-right font-medium">
+              {m.type === 'stationary' ? 'Sabit masalar' : m.type === 'howell' ? 'Howell' : m.type === 'mitchell' ? 'Mitchell' : 'Skip Mitchell'}
+            </dd>
+            <dt className="text-slate-500">Masa</dt>
+            <dd className="text-right font-medium">{m.tables}</dd>
+            <dt className="text-slate-500">Tur</dt>
+            <dd className="text-right font-medium">{roundCount}</dd>
+            <dt className="text-slate-500">Oynanan board</dt>
+            <dd className="text-right font-medium">{roundCount * boards}</dd>
+            <dt className="text-slate-500">Hazırlanacak board</dt>
+            <dd className="text-right font-medium">1–{m.totalBoards}</dd>
+            <dt className="text-slate-500">Tahmini süre</dt>
+            <dd className="text-right font-medium">{formatDuration(minutes)}</dd>
+          </dl>
+          {m.type === 'stationary' && (
+            <p className="mt-3 rounded-lg bg-sky-50 p-2 text-sm text-sky-800">
+              Her masa 1–{m.totalBoards} arası boardların hepsini oynar; boardlar masalar arasında dolaştırılır.
+              Aynı boardun farklı masalardaki skorları karşılaştırılır. K-G ve D-B ayrı sıralanır.
+            </p>
+          )}
+          {m.missingEW !== null && (
+            <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">
+              Çift sayısı tek: D-B {m.missingEW} yok, her tur bir K-G çifti oturur.
+            </p>
+          )}
+          {m.type === 'howell' && (
+            <p className="mt-3 rounded-lg bg-sky-50 p-2 text-sm text-sky-800">
+              4 çift: herkes herkesle oynar, tek sıralama çıkar. Her turda iki masa aynı boardları oynar; yarısını
+              oynayınca boardları diğer masayla değiştirin. Tur başına 6-8 board önerilir.
+            </p>
+          )}
+          {m.type === 'skip-mitchell' && (
+            <p className="mt-3 rounded-lg bg-sky-50 p-2 text-sm text-sky-800">
+              Masa sayısı çift: {Math.floor(m.tables / 2) + 1}. turdan itibaren D-B çiftleri bir masa atlar.
+            </p>
+          )}
+        </Card>
+      )}
 
       {cloudEnabled && (
         <Card>
@@ -141,13 +217,19 @@ function Setup({ onCreate }: { onCreate: (t: NewTournament, shared: boolean) => 
       <button
         type="button"
         className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white disabled:opacity-40"
-        disabled={!name.trim() || busy}
+        disabled={!name.trim() || busy || !m}
         onClick={async () => {
           setBusy(true)
           setError(null)
           try {
             await onCreate(
-              { name: name.trim(), date: new Date().toLocaleDateString('tr-TR'), pairCount, boardsPerRound },
+              {
+                name: name.trim(),
+                date: new Date().toLocaleDateString('tr-TR'),
+                pairCount,
+                boardsPerRound: boards,
+                movement: kind,
+              },
               shared,
             )
           } catch (e) {
@@ -401,8 +483,12 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
       </section>
 
       <p className="px-1 text-xs text-slate-500">
-        Skor girmek için masaya dokun. Her turdan sonra K-G çiftleri yerinde kalır, D-B çiftleri bir üst masaya,
-        boardlar bir alt masaya geçer.
+        Skor girmek için masaya dokun.{' '}
+        {m.type === 'stationary'
+          ? 'Sabit masalar: çiftler yerinde kalır; her masa bütün boardları oynar, boardlar masalar arasında dolaştırılır.'
+          : isHowell(m)
+            ? 'Howell: çiftler her tur tablodaki yerlerine geçer; iki masa aynı boardları oynar ve yarıda boardları değiştirir.'
+            : 'Her turdan sonra K-G çiftleri yerinde kalır, D-B çiftleri bir üst masaya, boardlar bir alt masaya geçer.'}
         {m.type === 'skip-mitchell' && ` ${Math.floor(m.tables / 2) + 1}. turda D-B çiftleri bir masa atlar.`}
       </p>
 
@@ -466,10 +552,11 @@ function TableView({ tournament, m, round, table, back, openBoard }: {
         <div className="text-sm text-slate-500">Tur {round}</div>
         <div className="text-3xl font-bold">Masa {table}</div>
         <div className="mt-1 text-slate-600">K-G {a.ns} · D-B {a.ew}</div>
-        {(pairNames(tournament.names, 'NS', a.ns) || (a.ew !== null && pairNames(tournament.names, 'EW', a.ew))) && (
+        {(pairNames(tournament.names, 'NS', a.ns) ||
+          (a.ew !== null && pairNames(tournament.names, nameSide(isHowell(m), 'EW'), a.ew))) && (
           <div className="mt-1 text-sm text-slate-500">
             {pairNames(tournament.names, 'NS', a.ns) || `K-G ${a.ns}`} <span className="text-slate-300">vs</span>{' '}
-            {(a.ew !== null && pairNames(tournament.names, 'EW', a.ew)) || `D-B ${a.ew}`}
+            {(a.ew !== null && pairNames(tournament.names, nameSide(isHowell(m), 'EW'), a.ew)) || `D-B ${a.ew}`}
           </div>
         )}
       </Card>
@@ -573,7 +660,7 @@ export default function Tournament() {
   const sync = useCloudSync(tournament, setTournament)
 
   const m = useMemo(
-    () => (tournament ? mitchell(tournament.pairCount, tournament.boardsPerRound) : null),
+    () => (tournament ? createMovement(tournament.pairCount, tournament.boardsPerRound, tournament.movement) : null),
     [tournament],
   )
 
@@ -606,6 +693,7 @@ export default function Tournament() {
             date: ct.date,
             pairCount: ct.pairCount,
             boardsPerRound: ct.boardsPerRound,
+            movement: ct.movement ?? undefined,
             createdAt: Date.now(),
             results: {},
             cloud: { id: ct.id, code: ct.code },
@@ -645,6 +733,7 @@ export default function Tournament() {
     return (
       <PairEditor
         key={`${view.side}-${view.number}`}
+        howell={isHowell(m)}
         side={view.side}
         number={view.number}
         names={tournament.names}

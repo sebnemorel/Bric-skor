@@ -23,7 +23,7 @@ create table if not exists public.tournaments (
   code             text not null unique,
   name             text not null check (char_length(name) between 1 and 80),
   date             text not null check (char_length(date) <= 20),
-  pair_count       int  not null check (pair_count between 5 and 60),
+  pair_count       int  not null check (pair_count between 4 and 60),
   boards_per_round int  not null check (boards_per_round between 1 and 8),
   admin_hash       text not null,
   created_at       timestamptz not null default now()

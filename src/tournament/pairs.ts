@@ -36,3 +36,12 @@ export function cleanPair(p: PairInfo): PairInfo {
   if (p.category && (CATEGORIES as readonly string[]).includes(p.category)) out.category = p.category
   return out
 }
+
+/**
+ * İsimlerin hangi anahtar altında tutulacağı: Mitchell'de K-G ve D-B ayrı çiftlerdir,
+ * Howell'de ise çift numarası yönden bağımsızdır (hep "NS-k" altında tutulur).
+ */
+export const nameSide = (howell: boolean, side: Side): Side => (howell ? 'NS' : side)
+
+/** Ekranda çiftin adı: Mitchell'de "K-G 3", Howell'de "Çift 3". */
+export const pairLabel = (howell: boolean, side: Side, n: number) => (howell ? `Çift ${n}` : `${sideLabel(side)} ${n}`)

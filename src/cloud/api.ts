@@ -1,6 +1,7 @@
 // Supabase ile konuşan kısım. Ortam değişkenleri yoksa uygulama "sadece bu telefon" modunda çalışır.
 
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js'
+import type { MovementKind } from '../tournament/movement'
 import type { PairInfo, PairNames } from '../tournament/pairs'
 import { resultKey, type BoardResult, type Results } from '../tournament/results'
 import { fromRow, pairFromRow, pairToRow, toRow, type PairRow, type ResultRow } from './sync'
@@ -24,6 +25,7 @@ export interface CloudTournament {
   date: string
   pairCount: number
   boardsPerRound: number
+  movement?: MovementKind | null
 }
 
 /** Bu cihaza özel kalıcı bir kimlik (kimin skor girdiğini ayırt etmek için). */
@@ -55,6 +57,7 @@ export async function createTournament(input: {
   date: string
   pairCount: number
   boardsPerRound: number
+  movement?: MovementKind
   adminSecret: string
 }): Promise<{ id: string; code: string }> {
   const { data, error } = await db().rpc('create_tournament', {
@@ -63,6 +66,7 @@ export async function createTournament(input: {
     p_pair_count: input.pairCount,
     p_boards_per_round: input.boardsPerRound,
     p_admin_secret: input.adminSecret,
+    p_movement: input.movement ?? null,
   })
   if (error || !data) fail('Turnuva oluşturulamadı. İnternet bağlantını kontrol et.', error)
   return data as { id: string; code: string }

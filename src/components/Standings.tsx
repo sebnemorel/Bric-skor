@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import type { Movement } from '../tournament/movement'
 import { CATEGORIES, pairCategory, pairNames, type Category } from '../tournament/pairs'
 import { formatResult } from '../tournament/results'
-import { computeStandings, rankSubset } from '../tournament/standings'
+import { combinedStandings, computeStandings, rankSubset } from '../tournament/standings'
+import { isHowell, pairNumbers } from '../tournament/movement'
 import type { Tournament } from '../tournament/storage'
 import { BoardMeta } from './BoardHeader'
 import { BackButton, Card } from './ui'
@@ -14,20 +15,20 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
   const [board, setBoard] = useState<number | null>(null)
   const [category, setCategory] = useState<Category | null>(null)
 
+  const howell = isHowell(m)
   const st = useMemo(() => {
-    const ns = Array.from({ length: m.tables }, (_, i) => i + 1)
-    const ew = ns.filter(p => p !== m.missingEW)
-    return computeStandings(tournament.results, ns, ew)
-  }, [tournament.results, m])
+    const { ns, ew } = pairNumbers(m)
+    return howell ? combinedStandings(tournament.results, ns) : computeStandings(tournament.results, ns, ew)
+  }, [tournament.results, m, howell])
 
-  const pairSide = side === 'ns' ? 'NS' : 'EW'
+  const pairSide = howell || side === 'ns' ? 'NS' : 'EW'
   const names = tournament.names
-  const all = side === 'ns' ? st.ns : st.ew
+  const all = howell || side === 'ns' ? st.ns : st.ew
   // bu tarafta kullanılan kategoriler (filtre butonları için)
   const usedCategories = CATEGORIES.filter(c => all.some(s => pairCategory(names, pairSide, s.pair) === c))
   const activeCategory = category && usedCategories.includes(category) ? category : null
   const list = activeCategory ? rankSubset(all, p => pairCategory(names, pairSide, p) === activeCategory) : all
-  const prefix = side === 'ns' ? 'K-G' : 'D-B'
+  const prefix = howell ? 'Çift' : side === 'ns' ? 'K-G' : 'D-B'
   const playedBoards = [...st.boards.keys()]
   const selected = board !== null ? st.boards.get(board) : undefined
   const anyScored = list.some(s => s.top > 0)
@@ -38,9 +39,12 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
 
       <Card>
         <div className="text-lg font-bold">{tournament.name}</div>
-        <div className="text-sm text-slate-500">Sıralama · matchpoint yüzdesi</div>
+        <div className="text-sm text-slate-500">
+          Sıralama · matchpoint yüzdesi{howell ? ' · Howell (tek sıralama)' : ''}
+        </div>
       </Card>
 
+      {!howell && (
       <nav className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm">
         {(['ns', 'ew'] as const).map(s => (
           <button
@@ -53,6 +57,7 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
           </button>
         ))}
       </nav>
+      )}
 
       {usedCategories.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -165,7 +170,7 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
 
       <p className="px-1 text-xs text-slate-500">
         Her boardda geçtiğin her skor için 2, eşit olduğun her skor için 1 puan alırsın. Yüzde = toplam puan / alınabilecek
-        en yüksek puan. K-G ve D-B ayrı sıralanır.
+        en yüksek puan. {howell ? 'Howell’de tüm çiftler tek listede sıralanır.' : 'K-G ve D-B ayrı sıralanır.'}
       </p>
     </div>
   )

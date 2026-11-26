@@ -83,3 +83,37 @@ describe('sıralama', () => {
     expect(st.boards.size).toBe(0)
   })
 })
+
+describe('Howell: tek sıralama', () => {
+  it('çiftin K-G ve D-B puanları toplanır', async () => {
+    const { combinedStandings } = await import('./standings')
+    // Board 1: Masa 1'de 1(K-G) – 2(D-B): +420 ; Masa 2'de 3(K-G) – 4(D-B): +170
+    const results: Results = {
+      [resultKey(1, 1)]: { ...r(1, 2, 420, 1) },
+      [resultKey(1, 3)]: { ...r(3, 4, 170, 1) },
+    }
+    const st = combinedStandings(results, [1, 2, 3, 4])
+    const by = (p: number) => st.ns.find(s => s.pair === p)!
+    expect(by(1)).toMatchObject({ mp: 2, top: 2, percent: 100 }) // K-G olarak kazandı
+    expect(by(2)).toMatchObject({ mp: 0, top: 2, percent: 0 })
+    expect(by(4)).toMatchObject({ mp: 2, top: 2, percent: 100 }) // D-B olarak kazandı
+    expect(st.ns[0].place).toBe('1=')
+    expect(st.ew).toEqual([])
+  })
+})
+
+describe('Sabit masalar: sıralama', () => {
+  it('her board iki masada oynanır, K-G ve D-B ayrı sıralanır', async () => {
+    const { stationary } = await import('./movement')
+    const { makeResult, DEFAULT_ENTRY } = await import('./results')
+    const m = stationary(4, 3)
+    const res: Results = {}
+    // Masa 1 her boardda 4♠ yapıyor (+420), Masa 2 batıyor (-50)
+    for (const a of m.rounds[0])
+      for (const b of a.boards)
+        res[resultKey(b, a.ns)] = makeResult(a, 1, b, { ...DEFAULT_ENTRY, result: a.table === 1 ? 0 : -1 })
+    const st = computeStandings(res, [1, 2], [1, 2])
+    expect(st.ns[0]).toMatchObject({ pair: 1, percent: 100, boards: 3 })
+    expect(st.ew[0]).toMatchObject({ pair: 2, percent: 100 })
+  })
+})

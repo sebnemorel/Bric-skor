@@ -1,6 +1,7 @@
 // Turnuvayı tarayıcının localStorage'ına kaydeder.
 // Bulut turnuvalarında da bir kopya burada tutulur: internet giderse uygulama çalışmaya devam eder.
 import type { Pending } from '../cloud/sync'
+import type { MovementKind } from './movement'
 import type { PairInfo, PairNames } from './pairs'
 import type { Results } from './results'
 
@@ -14,7 +15,8 @@ export interface Tournament {
   name: string
   date: string // GG.AA.YYYY
   pairCount: number
-  boardsPerRound: number
+  boardsPerRound: number // sabit masalarda: toplam board
+  movement?: MovementKind // yoksa (eski turnuvalar) çift sayısına göre seçilir
   createdAt: number
   results: Results
   cloud?: CloudInfo // yoksa turnuva sadece bu telefonda

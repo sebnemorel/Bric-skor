@@ -91,3 +91,17 @@ describe('Masam: tur geçişi', () => {
     }
   })
 })
+
+describe('Masam: Howell geçişi', () => {
+  it('çiftlerin yeni masaları (yön değişse bile) bulunur', async () => {
+    const { createMovement } = await import('./movement')
+    const m = createMovement(4, 2)
+    // Tur 1: Masa 2'de 3 – 4; Tur 2'de 3 Masa 1'de (K-G), 4 Masa 2'de (D-B)
+    const t = transition(m, 1, 2)!
+    expect(t.nsTo).toBe(1)
+    expect(t.ewTo).toBe(2)
+    expect(t.boardsTo).toBeNull() // her tur yeni boardlar
+    expect(t.next.ns).toBe(2)
+    expect(t.next.ew).toBe(4)
+  })
+})

@@ -30,8 +30,9 @@ export function currentRound(m: Movement, results: Results, table: number): numb
 }
 
 export interface Transition {
-  boardsTo: number | null // bu turun boardları sonraki turda hangi masaya gidiyor
+  boardsTo: number | null // bu turun boardları sonraki turda hangi masaya gidiyor (Howell'de null: her tur yeni boardlar)
   ewTo: number | null // bu turun D-B çifti sonraki turda hangi masaya gidiyor
+  nsTo: number | null // bu turun K-G çifti sonraki turda hangi masaya gidiyor (Mitchell'de hep aynı masa)
   next: TableAssignment // sonraki turda bu masa
   boardsFrom: number | null // sonraki turun boardları şu an hangi masada
 }
@@ -42,8 +43,14 @@ export function transition(m: Movement, round: number, table: number): Transitio
   const now = seat(m, round, table)
   const nextRound = m.rounds[round] // 0 tabanlı: sıradaki tur
   const next = nextRound[table - 1]
+  // Mitchell'de K-G 3 ile D-B 3 farklı çiftlerdir → sadece aynı yönde ara.
+  // Howell'de çift numarası tektir ve çiftler yön değiştirir → iki yönde de ara.
+  const howell = m.type === 'howell'
+  const tableOf = (pair: number | null, side: 'ns' | 'ew') =>
+    pair === null
+      ? null
+      : (nextRound.find(a => (howell ? a.ns === pair || a.ew === pair : a[side] === pair))?.table ?? null)
   const boardsTo = nextRound.find(a => a.boardSet === now.boardSet)?.table ?? null
-  const ewTo = now.ew === null ? null : (nextRound.find(a => a.ew === now.ew)?.table ?? null)
   const boardsFrom = m.rounds[round - 1].find(a => a.boardSet === next.boardSet)?.table ?? null
-  return { boardsTo, ewTo, next, boardsFrom }
+  return { boardsTo, ewTo: tableOf(now.ew, 'ew'), nsTo: tableOf(now.ns, 'ns'), next, boardsFrom }
 }

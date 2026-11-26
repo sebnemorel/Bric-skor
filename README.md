@@ -17,7 +17,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 - [x] Kontrat puanı hesaplama (kontr/rekontr, vulnerability, şlemler, batma cezaları)
 - [x] Board numarasından dağıtıcı ve vulnerability
 - [x] Mobil uyumlu skor hesaplayıcı ekranı
-- [x] Turnuva kurulumu (Mitchell / skip Mitchell hareketi, tek çift sayısında oturan çift)
+- [x] Turnuva kurulumu: Sabit masalar (çiftler yerinde, her masa aynı boardları oynar), Howell (4 çift), Mitchell / skip Mitchell (5+ çift)
 - [x] Masa ekranı ve skor girişi (pas, düzeltme, silme; skorlar cihazda saklanır)
 - [x] Matchpoint hesaplama, K-G / D-B sıralaması ve board detayları
 - [x] Oyuncu isimleri ve kategoriler (Açık, Karışık, Kadın, Senyör, Genç), kategoriye göre sıralama
@@ -40,7 +40,7 @@ npm run build   # yayın için derleme
 ## Çoklu cihaz kurulumu (Supabase)
 
 1. [supabase.com](https://supabase.com)'da ücretsiz bir proje aç.
-2. SQL Editor'de sırayla `supabase/schema.sql` ve `supabase/02_pairs.sql` dosyalarını çalıştır.
+2. SQL Editor'de sırayla `supabase/schema.sql`, `02_pairs.sql`, `03_howell.sql` ve `04_movement.sql` dosyalarını çalıştır.
 3. `.env.example` dosyasını `.env.local` adıyla kopyala, Project URL ve publishable key'i yaz.
 4. Vercel'de aynı iki değişkeni (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) Environment Variables'a ekle.
 
@@ -54,7 +54,7 @@ src/
     score.ts           # puan hesaplama motoru
     score.test.ts
   tournament/
-    movement.ts        # Mitchell hareketi (kim, hangi masada, hangi boardları oynar)
+    movement.ts        # Sabit masalar, Howell ve Mitchell hareketleri (kim, hangi masada, hangi boardları oynar)
     movement.test.ts
     results.ts         # masa sonuçlarının kaydı
     results.test.ts

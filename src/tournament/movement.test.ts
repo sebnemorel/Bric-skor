@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mitchell, type Movement } from './movement'
+import { createMovement, howell, mitchell, type Movement } from './movement'
 
 /** Bir hareketin briç kurallarına uyup uymadığını kontrol eder. */
 function checkRules(m: Movement) {
@@ -75,8 +75,95 @@ describe('Mitchell hareketi', () => {
   })
 
   it('geçersiz girdiler', () => {
-    expect(() => mitchell(4, 3)).toThrow()
+    expect(() => mitchell(4, 3)).toThrow() // Mitchell en az 5 çift
     expect(() => mitchell(10, 0)).toThrow()
     expect(() => mitchell(10.5, 3)).toThrow()
+  })
+})
+
+describe('Howell (4 çift, 2 masa)', () => {
+  const m = createMovement(4, 6)
+
+  it('4 çift için Howell seçilir', () => {
+    expect(m.type).toBe('howell')
+    expect(m.tables).toBe(2)
+    expect(m.rounds).toHaveLength(3)
+    expect(m.totalBoards).toBe(18)
+    expect(createMovement(5, 3).type).toBe('mitchell')
+  })
+
+  it('her turda 4 çiftin hepsi bir kez oynar', () => {
+    for (const round of m.rounds) {
+      const pairs = round.flatMap(a => [a.ns, a.ew])
+      expect([...pairs].sort()).toEqual([1, 2, 3, 4])
+    }
+  })
+
+  it('herkes herkesle tam bir kez karşılaşır', () => {
+    const meetings = new Set<string>()
+    for (const round of m.rounds)
+      for (const a of round) meetings.add([a.ns, a.ew!].sort().join('-'))
+    expect([...meetings].sort()).toEqual(['1-2', '1-3', '1-4', '2-3', '2-4', '3-4'])
+  })
+
+  it('iki masa aynı turda aynı boardları oynar; her board iki kez oynanır', () => {
+    for (const round of m.rounds) expect(round[0].boards).toEqual(round[1].boards)
+    const count = new Map<number, number>()
+    for (const round of m.rounds) for (const a of round) for (const b of a.boards) count.set(b, (count.get(b) ?? 0) + 1)
+    expect(count.size).toBe(18)
+    expect([...count.values()].every(c => c === 2)).toBe(true)
+  })
+
+  it('her çift her boardu tam bir kez oynar', () => {
+    for (let p = 1; p <= 4; p++) {
+      const boards = m.rounds.flatMap(r => r.filter(a => a.ns === p || a.ew === p).flatMap(a => a.boards))
+      expect(new Set(boards).size).toBe(18)
+      expect(boards).toHaveLength(18)
+    }
+  })
+
+  it('1 numaralı çift hep 1. masada', () => {
+    for (const round of m.rounds) expect([round[0].ns, round[0].ew]).toContain(1)
+  })
+
+  it('geçersiz girdiler', () => {
+    expect(() => createMovement(3, 3)).toThrow()
+    expect(() => howell(6, 3)).toThrow()
+  })
+})
+
+describe('Sabit masalar', () => {
+  it('çiftler masada sabit, her masa bütün boardları oynar, tek tur', async () => {
+    const { stationary } = await import('./movement')
+    const m = stationary(4, 12)
+    expect(m.type).toBe('stationary')
+    expect(m.tables).toBe(2)
+    expect(m.rounds).toHaveLength(1)
+    expect(m.totalBoards).toBe(12)
+    for (const a of m.rounds[0]) {
+      expect(a.ns).toBe(a.table)
+      expect(a.ew).toBe(a.table)
+      expect(a.boards).toEqual(Array.from({ length: 12 }, (_, i) => i + 1))
+    }
+  })
+
+  it('geçersiz: tek çift sayısı, çok board', async () => {
+    const { stationary } = await import('./movement')
+    expect(() => stationary(5, 12)).toThrow()
+    expect(() => stationary(2, 12)).toThrow()
+    expect(() => stationary(6, 37)).toThrow()
+  })
+
+  it('hareket seçenekleri çift sayısına göre', async () => {
+    const { availableKinds } = await import('./movement')
+    expect(availableKinds(4)).toEqual(['stationary', 'howell'])
+    expect(availableKinds(5)).toEqual(['mitchell'])
+    expect(availableKinds(8)).toEqual(['stationary', 'mitchell'])
+  })
+
+  it('eski turnuvalar (tür yok) eskisi gibi seçilir', () => {
+    expect(createMovement(4, 6).type).toBe('howell')
+    expect(createMovement(10, 3).type).toBe('mitchell')
+    expect(createMovement(4, 12, 'stationary').type).toBe('stationary')
   })
 })
