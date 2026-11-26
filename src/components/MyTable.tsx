@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Movement } from '../tournament/movement'
+import { pairNames, type Side } from '../tournament/pairs'
 import { currentRound, roundDone, seat, transition } from '../tournament/myTable'
 import { formatResult, resultKey, tableProgress } from '../tournament/results'
 import type { Tournament } from '../tournament/storage'
@@ -53,11 +54,12 @@ export function TablePicker({ tournament, m, onPick, onAll }: {
 
 // ---------------- Masam ekranı ----------------
 
-export function MyTableView({ tournament, m, table, openBoard, openStandings, onChangeTable, onShowAll, codeBox }: {
+export function MyTableView({ tournament, m, table, openBoard, openStandings, onChangeTable, onShowAll, onEditPair, codeBox }: {
   tournament: Tournament
   m: Movement
   table: number
   openBoard: (round: number, board: number) => void
+  onEditPair: (side: Side, number: number) => void
   openStandings: () => void
   onChangeTable: () => void
   onShowAll: () => void
@@ -138,19 +140,30 @@ export function MyTableView({ tournament, m, table, openBoard, openStandings, on
         </Card>
       ) : (
         <>
-          <Card className="flex items-center justify-around text-center">
-            <div>
-              <div className="text-xs text-slate-500">K-G</div>
-              <div className="text-2xl font-bold">{a.ns}</div>
-            </div>
-            <div className="text-slate-300">vs</div>
-            <div>
-              <div className="text-xs text-slate-500">D-B</div>
-              <div className="text-2xl font-bold">{a.ew}</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Board</div>
-              <div className="text-2xl font-bold">{range(a.boards)}</div>
+          <Card className="space-y-2">
+            {([['NS', a.ns], ['EW', a.ew]] as const).map(([side, n]) => {
+              const label = pairNames(tournament.names, side, n)
+              return (
+                <div key={side} className="flex items-center gap-3">
+                  <div className="w-14 shrink-0">
+                    <div className="text-xs text-slate-500">{side === 'NS' ? 'K-G' : 'D-B'}</div>
+                    <div className="text-2xl font-bold leading-none">{n}</div>
+                  </div>
+                  <div className={`flex-1 ${label ? 'font-medium' : 'text-sm text-slate-400'}`}>{label || 'İsim girilmedi'}</div>
+                  <button
+                    type="button"
+                    onClick={() => onEditPair(side, n)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      label ? 'bg-slate-100 text-slate-600' : 'bg-emerald-700 text-white'
+                    }`}
+                  >
+                    {label ? 'Düzelt' : 'İsim gir'}
+                  </button>
+                </div>
+              )
+            })}
+            <div className="border-t border-slate-100 pt-2 text-sm text-slate-500">
+              Boardlar: <b className="text-slate-900">{range(a.boards)}</b>
             </div>
           </Card>
 

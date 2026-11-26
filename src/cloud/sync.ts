@@ -2,6 +2,7 @@
 // veritabanı satırı <-> uygulama sonucu dönüşümü ve bekleyen değişikliklerin birleştirilmesi.
 
 import type { Contract, Seat } from '../scoring/score'
+import { cleanPair, pairKey, type Category, type PairInfo, type PairNames, type Side } from '../tournament/pairs'
 import { resultKey, type BoardResult, type Results } from '../tournament/results'
 
 /** Veritabanındaki `results` tablosunun bir satırı. */
@@ -95,4 +96,41 @@ export function normalizeCode(input: string): string {
 
 export function isValidCode(code: string): boolean {
   return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code)
+}
+
+// ---------------- Çift isimleri ----------------
+
+/** Veritabanındaki `pairs` tablosunun bir satırı. */
+export interface PairRow {
+  tournament_id: string
+  side: Side
+  number: number
+  player1: string
+  player2: string
+  category: Category | null
+}
+
+export function pairToRow(tournamentId: string, key: string, p: PairInfo): PairRow {
+  const [side, num] = key.split('-')
+  const c = cleanPair(p)
+  return {
+    tournament_id: tournamentId,
+    side: side as Side,
+    number: Number(num),
+    player1: c.player1,
+    player2: c.player2,
+    category: c.category ?? null,
+  }
+}
+
+export function pairFromRow(row: PairRow): { key: string; info: PairInfo } {
+  return {
+    key: pairKey(row.side, row.number),
+    info: cleanPair({ player1: row.player1, player2: row.player2, category: row.category ?? undefined }),
+  }
+}
+
+/** Sunucudaki isimlerin üzerine gönderilmemiş yerel isimleri uygular. */
+export function mergeNames(server: PairNames, pending: Record<string, PairInfo>): PairNames {
+  return { ...server, ...pending }
 }

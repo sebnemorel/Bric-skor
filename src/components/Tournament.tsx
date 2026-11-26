@@ -17,6 +17,8 @@ import { loadTournament, saveTournament, type Tournament as T } from '../tournam
 import { BoardMeta } from './BoardHeader'
 import ContractForm from './ContractForm'
 import { MyTableView, TablePicker } from './MyTable'
+import { PairEditor, PairsView } from './Pairs'
+import { pairNames, type Side } from '../tournament/pairs'
 import Standings from './Standings'
 import { BackButton, Card, RoundButton, ScoreBoxes } from './ui'
 
@@ -292,7 +294,7 @@ function CodeBox({ tournament, status, pendingCount }: { tournament: T; status: 
 
 // ---------------- Tur tablosu ----------------
 
-function RoundView({ tournament, m, round, setRound, openTable, openStandings, openPicker, onLeave, onDelete, status, pendingCount }: {
+function RoundView({ tournament, m, round, setRound, openTable, openStandings, openPicker, openPairs, onLeave, onDelete, status, pendingCount }: {
   tournament: T
   m: Movement
   round: number
@@ -300,6 +302,7 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
   openTable: (table: number) => void
   openStandings: () => void
   openPicker: () => void
+  openPairs: () => void
   onLeave: () => void
   onDelete: () => void
   status: SyncStatus
@@ -337,6 +340,13 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
           className="mt-2 h-11 w-full rounded-xl bg-slate-100 text-sm font-semibold text-slate-700"
         >
           📍 Bu telefon bir masada mı? Masamı seç
+        </button>
+        <button
+          type="button"
+          onClick={openPairs}
+          className="mt-2 h-11 w-full rounded-xl bg-slate-100 text-sm font-semibold text-slate-700"
+        >
+          👥 Çiftler ve isimler
         </button>
       </Card>
 
@@ -456,6 +466,12 @@ function TableView({ tournament, m, round, table, back, openBoard }: {
         <div className="text-sm text-slate-500">Tur {round}</div>
         <div className="text-3xl font-bold">Masa {table}</div>
         <div className="mt-1 text-slate-600">K-G {a.ns} · D-B {a.ew}</div>
+        {(pairNames(tournament.names, 'NS', a.ns) || (a.ew !== null && pairNames(tournament.names, 'EW', a.ew))) && (
+          <div className="mt-1 text-sm text-slate-500">
+            {pairNames(tournament.names, 'NS', a.ns) || `K-G ${a.ns}`} <span className="text-slate-300">vs</span>{' '}
+            {(a.ew !== null && pairNames(tournament.names, 'EW', a.ew)) || `D-B ${a.ew}`}
+          </div>
+        )}
       </Card>
 
       <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
@@ -547,6 +563,8 @@ type View =
   | { kind: 'board'; table: number; board: number }
   | { kind: 'standings' }
   | { kind: 'pickTable' }
+  | { kind: 'pairs' }
+  | { kind: 'editPair'; side: Side; number: number; from: 'round' | 'pairs' }
 
 export default function Tournament() {
   const [tournament, setTournament] = useState<T | null>(() => loadTournament())
@@ -611,6 +629,32 @@ export default function Tournament() {
     return <Standings tournament={tournament} m={m} back={() => setView({ kind: 'round' })} />
   }
 
+  if (view.kind === 'pairs') {
+    return (
+      <PairsView
+        m={m}
+        names={tournament.names}
+        openPair={(side, number) => setView({ kind: 'editPair', side, number, from: 'pairs' })}
+        back={() => setView({ kind: 'round' })}
+      />
+    )
+  }
+
+  if (view.kind === 'editPair') {
+    const back = () => setView(view.from === 'pairs' ? { kind: 'pairs' } : { kind: 'round' })
+    return (
+      <PairEditor
+        key={`${view.side}-${view.number}`}
+        side={view.side}
+        number={view.number}
+        names={tournament.names}
+        onSave={sync.setPair}
+        back={back}
+        backLabel={view.from === 'pairs' ? 'Çiftler' : `Masa ${tournament.myTable ?? ''}`.trim()}
+      />
+    )
+  }
+
   if (view.kind === 'pickTable') {
     return <TablePicker tournament={tournament} m={m} onPick={t => setMyTable(t)} onAll={() => setMyTable(undefined)} />
   }
@@ -667,6 +711,7 @@ export default function Tournament() {
         openStandings={() => setView({ kind: 'standings' })}
         onChangeTable={() => setView({ kind: 'pickTable' })}
         onShowAll={() => setMyTable(undefined)}
+        onEditPair={(side, number) => setView({ kind: 'editPair', side, number, from: 'round' })}
         codeBox={
           tournament.cloud && (
             <Card className="pt-1">
@@ -687,6 +732,7 @@ export default function Tournament() {
       openTable={table => setView({ kind: 'table', table })}
       openStandings={() => setView({ kind: 'standings' })}
       openPicker={() => setView({ kind: 'pickTable' })}
+      openPairs={() => setView({ kind: 'pairs' })}
       onLeave={() => replace(null)}
       onDelete={async () => {
         const c = tournament.cloud

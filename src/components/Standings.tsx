@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { Movement } from '../tournament/movement'
+import { CATEGORIES, pairCategory, pairNames, type Category } from '../tournament/pairs'
 import { formatResult } from '../tournament/results'
-import { computeStandings } from '../tournament/standings'
+import { computeStandings, rankSubset } from '../tournament/standings'
 import type { Tournament } from '../tournament/storage'
 import { BoardMeta } from './BoardHeader'
 import { BackButton, Card } from './ui'
@@ -11,6 +12,7 @@ type Side = 'ns' | 'ew'
 export default function Standings({ tournament, m, back }: { tournament: Tournament; m: Movement; back: () => void }) {
   const [side, setSide] = useState<Side>('ns')
   const [board, setBoard] = useState<number | null>(null)
+  const [category, setCategory] = useState<Category | null>(null)
 
   const st = useMemo(() => {
     const ns = Array.from({ length: m.tables }, (_, i) => i + 1)
@@ -18,7 +20,13 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
     return computeStandings(tournament.results, ns, ew)
   }, [tournament.results, m])
 
-  const list = side === 'ns' ? st.ns : st.ew
+  const pairSide = side === 'ns' ? 'NS' : 'EW'
+  const names = tournament.names
+  const all = side === 'ns' ? st.ns : st.ew
+  // bu tarafta kullanılan kategoriler (filtre butonları için)
+  const usedCategories = CATEGORIES.filter(c => all.some(s => pairCategory(names, pairSide, s.pair) === c))
+  const activeCategory = category && usedCategories.includes(category) ? category : null
+  const list = activeCategory ? rankSubset(all, p => pairCategory(names, pairSide, p) === activeCategory) : all
   const prefix = side === 'ns' ? 'K-G' : 'D-B'
   const playedBoards = [...st.boards.keys()]
   const selected = board !== null ? st.boards.get(board) : undefined
@@ -46,6 +54,23 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
         ))}
       </nav>
 
+      {usedCategories.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {[null, ...usedCategories].map(c => (
+            <button
+              key={c ?? 'tumu'}
+              type="button"
+              onClick={() => setCategory(c)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium ${
+                activeCategory === c ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 bg-white'
+              }`}
+            >
+              {c ?? 'Tümü'}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!anyScored ? (
         <Card className="text-center text-sm text-slate-500">
           Sıralama için aynı boardun en az iki masada girilmiş olması gerekiyor.
@@ -56,8 +81,7 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-3 py-2">Sıra</th>
-                <th className="px-3 py-2">Çift</th>
-                <th className="px-3 py-2 text-right">Board</th>
+                <th className="px-3 py-2">Oyuncular</th>
                 <th className="px-3 py-2 text-right">MP</th>
                 <th className="px-3 py-2 text-right">%</th>
               </tr>
@@ -65,11 +89,17 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
             <tbody>
               {list.map((s, i) => (
                 <tr key={s.pair} className={`border-t border-slate-100 ${i === 0 ? 'bg-amber-50' : ''}`}>
-                  <td className="px-3 py-3 font-bold">{s.place}</td>
-                  <td className="px-3 py-3">{prefix} {s.pair}</td>
-                  <td className="px-3 py-3 text-right text-sm text-slate-500">{s.boards}</td>
-                  <td className="px-3 py-3 text-right text-sm">{s.mp}/{s.top}</td>
-                  <td className="px-3 py-3 text-right text-lg font-bold">{s.percent.toFixed(2)}</td>
+                  <td className="px-3 py-3 font-bold">{s.top > 0 ? s.place : '–'}</td>
+                  <td className="px-3 py-3">
+                    <div className="font-medium leading-tight">{pairNames(names, pairSide, s.pair) || `${prefix} ${s.pair}`}</div>
+                    <div className="text-xs text-slate-500">
+                      {prefix} {s.pair}
+                      {pairCategory(names, pairSide, s.pair) && ` · ${pairCategory(names, pairSide, s.pair)}`}
+                      {` · ${s.boards} board`}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3 text-right text-sm">{s.top > 0 ? `${s.mp}/${s.top}` : '–'}</td>
+                  <td className="px-3 py-3 text-right text-lg font-bold">{s.top > 0 ? s.percent.toFixed(2) : '–'}</td>
                 </tr>
               ))}
             </tbody>

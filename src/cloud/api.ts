@@ -1,8 +1,9 @@
 // Supabase ile konuşan kısım. Ortam değişkenleri yoksa uygulama "sadece bu telefon" modunda çalışır.
 
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js'
+import type { PairInfo, PairNames } from '../tournament/pairs'
 import { resultKey, type BoardResult, type Results } from '../tournament/results'
-import { fromRow, toRow, type ResultRow } from './sync'
+import { fromRow, pairFromRow, pairToRow, toRow, type PairRow, type ResultRow } from './sync'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -104,13 +105,33 @@ export async function deleteResult(tournamentId: string, board: number, ns: numb
   if (error) fail('Skor silinemedi.', error)
 }
 
+export async function fetchPairs(tournamentId: string): Promise<PairNames> {
+  const { data, error } = await db().from('pairs').select('*').eq('tournament_id', tournamentId)
+  if (error) fail('İsimler alınamadı.', error)
+  const names: PairNames = {}
+  for (const row of data as PairRow[]) {
+    const { key, info } = pairFromRow(row)
+    names[key] = info
+  }
+  return names
+}
+
+export async function upsertPair(tournamentId: string, key: string, p: PairInfo): Promise<void> {
+  const { error } = await db()
+    .from('pairs')
+    .upsert({ ...pairToRow(tournamentId, key, p), updated_at: new Date().toISOString() }, { onConflict: 'tournament_id,side,number' })
+  if (error) fail('İsim gönderilemedi.', error)
+}
+
 export type RemoteChange = { type: 'upsert'; row: ResultRow } | { type: 'delete'; board: number; ns: number }
+export type RemotePairChange = { key: string; info: PairInfo }
 
 /** Bu turnuvanın sonuçlarındaki değişiklikleri canlı dinler. Dönen fonksiyon dinlemeyi bitirir. */
 export function subscribeResults(
   tournamentId: string,
   onChange: (c: RemoteChange) => void,
   onStatus: (connected: boolean) => void,
+  onPair?: (c: RemotePairChange) => void,
 ): () => void {
   const channel: RealtimeChannel = db()
     .channel(`results:${tournamentId}`)
@@ -126,6 +147,14 @@ export function subscribeResults(
         } else {
           onChange({ type: 'upsert', row: payload.new as ResultRow })
         }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'pairs', filter: `tournament_id=eq.${tournamentId}` },
+      payload => {
+        if (payload.eventType === 'DELETE' || !onPair) return
+        onPair(pairFromRow(payload.new as PairRow))
       },
     )
     .subscribe(status => onStatus(status === 'SUBSCRIBED'))

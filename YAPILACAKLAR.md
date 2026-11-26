@@ -6,9 +6,6 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 
 ## İyileştirmeler (ana plan bitince)
 
-- [ ] **Oyuncu isimleri ve kategoriler** (kulübün bricskor.com sonuç sayfası gibi)
-  - "K-G 3" yerine "Ayşe Yılmaz – Mehmet Kaya"
-  - Kategori: Açık, Senyör, Karışık, Genç, Kadın; kategoriye göre sıralama
 - [ ] **Turnuva arşivi / takvim**: geçmiş turnuvalar silinmesin, liste halinde görünsün
 - [ ] **Herkese açık sonuç sayfası**: uygulama kurmadan linkle açılan, sadece okunan sıralama
 - [ ] **Oyuncu arama ve oyuncu sayfası**: bir oyuncunun tüm turnuvalardaki sonuçları
@@ -30,7 +27,6 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [ ] IMP hesaplama (takım turnuvaları için)
 - [ ] Howell hareketi (az çiftli akşamlar, 4-8 çift)
 - [ ] Sonuçları dışa aktarma: PDF / Excel / WhatsApp'ta paylaşma
-- [ ] Çift isimleri ("K-G 3" yerine "Ayşe – Mehmet")
 
 ## Notlar
 
@@ -45,6 +41,7 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Masa ekranı ve skor girişi
 - [x] Matchpoint ve sıralama
 - [x] Canlı yayın: https://bric-skor-akdeniz.vercel.app
+- [x] Oyuncu isimleri ve kategoriler: hakem girer, çiftler düzeltebilir; sıralamada isim, kategori ve kategori filtresi
 - [x] Uygulama adı "Briç Skor Akdeniz" oldu (kulübün kullandığı bricskor.com ile karışmasın)
 - [x] PWA (Chrome'da kurulabilir, internetsiz çalışır)
 - [x] Çoklu cihaz (Supabase): 6 haneli kod / linkle katılma, ortak skorlar, canlı güncelleme, internetsizken bekletme

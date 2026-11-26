@@ -7,10 +7,11 @@
 //     İnternet yoksa bekler; bağlantı gelince kendiliğinden gönderilir.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { cleanPair, type PairInfo } from '../tournament/pairs'
 import { resultKey, type BoardResult } from '../tournament/results'
 import { saveTournament, type Tournament } from '../tournament/storage'
-import { cloudEnabled, deleteResult, fetchResults, subscribeResults, upsertResult } from './api'
-import { applyRemoteChange, mergeResults } from './sync'
+import { cloudEnabled, deleteResult, fetchPairs, fetchResults, subscribeResults, upsertPair, upsertResult } from './api'
+import { applyRemoteChange, mergeNames, mergeResults } from './sync'
 
 export type SyncStatus = 'local' | 'connecting' | 'live' | 'offline'
 
@@ -26,7 +27,8 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
   const flushing = useRef(false)
 
   const cloudId = cloudEnabled ? tournament?.cloud?.id : undefined
-  const pendingCount = Object.keys(tournament?.pending ?? {}).length
+  const pendingCount =
+    Object.keys(tournament?.pending ?? {}).length + Object.keys(tournament?.pendingNames ?? {}).length
 
   /** Kaydedip state'i güncelleyen yardımcı. */
   const modify = useCallback(
@@ -67,20 +69,44 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
     [modify],
   )
 
+  /** Bir çiftin isimlerini sunucuya gönderir; başarılıysa bekleyenlerden çıkarır. */
+  const sendPair = useCallback(
+    async (cloudId: string, key: string, info: PairInfo): Promise<boolean> => {
+      try {
+        await upsertPair(cloudId, key, info)
+        modify(prev => {
+          if (!prev.pendingNames || prev.pendingNames[key] !== info) return prev
+          const pendingNames = { ...prev.pendingNames }
+          delete pendingNames[key]
+          return { ...prev, pendingNames }
+        })
+        setReachable(true)
+        return true
+      } catch {
+        setReachable(false)
+        return false
+      }
+    },
+    [modify],
+  )
+
   /** Bekleyen tüm değişiklikleri sırayla göndermeyi dener. */
   const flush = useCallback(async () => {
     if (flushing.current) return
     const t = ref.current
-    if (!t?.cloud || !t.pending) return
+    if (!t?.cloud) return
     flushing.current = true
     try {
-      for (const [key, value] of Object.entries(t.pending)) {
-        if (!(await send(t.cloud.id, key, value))) break // bağlantı yoksa diğerlerini deneme
+      for (const [key, value] of Object.entries(t.pending ?? {})) {
+        if (!(await send(t.cloud.id, key, value))) return // bağlantı yoksa diğerlerini deneme
+      }
+      for (const [key, info] of Object.entries(t.pendingNames ?? {})) {
+        if (!(await sendPair(t.cloud.id, key, info))) return
       }
     } finally {
       flushing.current = false
     }
-  }, [send])
+  }, [send, sendPair])
 
   // 1) İlk yükleme + 2) canlı dinleme
   useEffect(() => {
@@ -96,6 +122,15 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
       })
       .catch(() => !cancelled && setReachable(false))
 
+    fetchPairs(cloudId)
+      .then(server => {
+        if (cancelled) return
+        modify(prev => ({ ...prev, names: mergeNames(server, prev.pendingNames ?? {}) }))
+      })
+      .catch(() => {
+        // isimler alınamazsa skorlar yine çalışır; bir sonraki açılışta tekrar denenir
+      })
+
     const unsubscribe = subscribeResults(
       cloudId,
       change => modify(prev => ({ ...prev, results: applyRemoteChange(prev.results, prev.pending ?? {}, change) })),
@@ -103,6 +138,11 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
         setConnected(ok)
         if (ok) void flush()
       },
+      ({ key, info }) =>
+        modify(prev => {
+          if (prev.pendingNames && key in prev.pendingNames) return prev // yereldeki gönderilmemiş değişiklik kazanır
+          return { ...prev, names: { ...(prev.names ?? {}), [key]: info } }
+        }),
     )
 
     return () => {
@@ -141,7 +181,22 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
     [modify, send],
   )
 
+  /** Bir çiftin isimlerini/kategorisini kaydet. */
+  const setPair = useCallback(
+    (key: string, info: PairInfo) => {
+      const clean = cleanPair(info)
+      modify(prev => {
+        const names = { ...(prev.names ?? {}), [key]: clean }
+        if (!prev.cloud) return { ...prev, names }
+        return { ...prev, names, pendingNames: { ...(prev.pendingNames ?? {}), [key]: clean } }
+      })
+      const cloudId = ref.current?.cloud?.id
+      if (cloudEnabled && cloudId) void sendPair(cloudId, key, clean)
+    },
+    [modify, sendPair],
+  )
+
   const status: SyncStatus = !cloudId ? 'local' : !reachable ? 'offline' : connected ? 'live' : 'connecting'
 
-  return { status, pendingCount, setResult }
+  return { status, pendingCount, setResult, setPair }
 }

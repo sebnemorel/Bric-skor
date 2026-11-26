@@ -1,6 +1,7 @@
 // Turnuvayı tarayıcının localStorage'ına kaydeder.
 // Bulut turnuvalarında da bir kopya burada tutulur: internet giderse uygulama çalışmaya devam eder.
 import type { Pending } from '../cloud/sync'
+import type { PairInfo, PairNames } from './pairs'
 import type { Results } from './results'
 
 export interface CloudInfo {
@@ -19,6 +20,8 @@ export interface Tournament {
   cloud?: CloudInfo // yoksa turnuva sadece bu telefonda
   pending?: Pending // buluta henüz gönderilemeyen değişiklikler
   myTable?: number // "Masam" modu: bu telefon hangi masada (yoksa tüm masalar görünür)
+  names?: PairNames // çift isimleri ve kategorileri ("NS-3" → { player1, player2, category })
+  pendingNames?: Record<string, PairInfo> // buluta henüz gönderilemeyen isim değişiklikleri
 }
 
 const KEY = 'bric-skor:tournament'

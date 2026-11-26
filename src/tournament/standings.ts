@@ -94,3 +94,8 @@ export function computeStandings(results: Results, nsPairs: number[], ewPairs: n
     boards,
   }
 }
+
+/** Sıralamanın bir alt kümesini (ör. bir kategori) kendi içinde yeniden sıralar. */
+export function rankSubset(list: Standing[], include: (pair: number) => boolean): Standing[] {
+  return rank(list.filter(s => include(s.pair)).map(({ place: _place, ...rest }) => rest))
+}
