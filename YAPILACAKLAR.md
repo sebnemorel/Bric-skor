@@ -2,13 +2,7 @@
 
 ## Sıradaki
 
-- [ ] **5. aşama: Çoklu cihaz**
-  - [x] Supabase projesi ve veritabanı şeması (`supabase/schema.sql`)
-  - [x] Turnuva kur → 6 haneli kod; kodla / linkle katıl
-  - [x] Skorlar ortak veritabanına; internet yokken telefonda bekler, gelince gönderilir
-  - [x] Aynı boarda iki giriş → son giren geçerli
-  - [ ] Gerçek Supabase ile iki telefonda canlı deneme ("Canlı" durumu, anlık güncelleme)
-  - [ ] "Masam" modu: masadaki telefon sadece kendi masasını ve sıradaki boardları görsün
+_Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "Sonra" bölümlerinde._
 
 ## İyileştirmeler (ana plan bitince)
 
@@ -44,4 +38,6 @@
 - [x] Matchpoint ve sıralama
 - [x] Canlı yayın: https://bric-skor-akdeniz.vercel.app
 - [x] PWA (Chrome'da kurulabilir, internetsiz çalışır)
+- [x] Çoklu cihaz (Supabase): 6 haneli kod / linkle katılma, ortak skorlar, canlı güncelleme, internetsizken bekletme
+- [x] "Masam" modu: masa seçici, otomatik tur geçişi, tur sonu hareket talimatı (boardlar / D-B nereye)
 - [x] Her tarayıcıda kurulum: "Telefona kur" banner'ı (Chrome/Edge'de tek dokunuş, diğerlerinde tarayıcıya özel talimat + "Chrome'da aç")

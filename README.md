@@ -21,6 +21,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 - [x] Masa ekranı ve skor girişi (pas, düzeltme, silme; skorlar cihazda saklanır)
 - [x] Matchpoint hesaplama, K-G / D-B sıralaması ve board detayları
 - [ ] IMP hesaplama
+- [x] "Masam" modu: masadaki telefon sadece kendi masasını görür, turlar arası hareket talimatı verir
 - [x] Çoklu cihaz: 6 haneli turnuva kodu, her masa kendi telefonundan girer, canlı sıralama, internetsizken bekletme (Supabase)
 - [x] PWA (telefona kurulabilir, internetsiz çalışır)
 - [x] Her tarayıcı için kurulum yardımı (Safari, Samsung Internet, Firefox, telefonun kendi tarayıcısı)
@@ -56,6 +57,8 @@ src/
     movement.test.ts
     results.ts         # masa sonuçlarının kaydı
     results.test.ts
+    myTable.ts         # "Masam" modu: şu anki tur, tur sonu hareket
+    myTable.test.ts
     standings.ts       # matchpoint ve sıralama
     standings.test.ts
     storage.ts         # turnuvayı tarayıcıya kaydetme
@@ -72,7 +75,9 @@ src/
     Calculator.tsx     # skor hesaplayıcı ekranı
     Tournament.tsx     # kurulum, tur tablosu, masa ve skor girişi
     Standings.tsx      # sıralama ve board detayları
+    MyTable.tsx        # masa seçici ve "Masam" ekranı
     ui.tsx             # küçük ortak parçalar
+  tr.ts                # Türkçe sayı ekleri (Masa 2'ye, Masa 3'ten)
   App.tsx              # sekmeler
 ```
 

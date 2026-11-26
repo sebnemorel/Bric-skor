@@ -16,6 +16,7 @@ import {
 import { loadTournament, saveTournament, type Tournament as T } from '../tournament/storage'
 import { BoardMeta } from './BoardHeader'
 import ContractForm from './ContractForm'
+import { MyTableView, TablePicker } from './MyTable'
 import Standings from './Standings'
 import { BackButton, Card, RoundButton, ScoreBoxes } from './ui'
 
@@ -291,13 +292,14 @@ function CodeBox({ tournament, status, pendingCount }: { tournament: T; status: 
 
 // ---------------- Tur tablosu ----------------
 
-function RoundView({ tournament, m, round, setRound, openTable, openStandings, onLeave, onDelete, status, pendingCount }: {
+function RoundView({ tournament, m, round, setRound, openTable, openStandings, openPicker, onLeave, onDelete, status, pendingCount }: {
   tournament: T
   m: Movement
   round: number
   setRound: (r: number) => void
   openTable: (table: number) => void
   openStandings: () => void
+  openPicker: () => void
   onLeave: () => void
   onDelete: () => void
   status: SyncStatus
@@ -328,6 +330,13 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
           className="mt-3 h-11 w-full rounded-xl bg-amber-400 font-semibold text-slate-900"
         >
           🏆 Sıralama ve sonuçlar
+        </button>
+        <button
+          type="button"
+          onClick={openPicker}
+          className="mt-2 h-11 w-full rounded-xl bg-slate-100 text-sm font-semibold text-slate-700"
+        >
+          📍 Bu telefon bir masada mı? Masamı seç
         </button>
       </Card>
 
@@ -537,6 +546,7 @@ type View =
   | { kind: 'table'; table: number }
   | { kind: 'board'; table: number; board: number }
   | { kind: 'standings' }
+  | { kind: 'pickTable' }
 
 export default function Tournament() {
   const [tournament, setTournament] = useState<T | null>(() => loadTournament())
@@ -549,11 +559,11 @@ export default function Tournament() {
     [tournament],
   )
 
-  const replace = (t: T | null) => {
+  const replace = (t: T | null, next: View = { kind: 'round' }) => {
     saveTournament(t)
     setTournament(t)
     setRound(1)
-    setView({ kind: 'round' })
+    setView(next)
     // paylaşılan linkteki ?kod= kısmını adres çubuğundan temizle
     if (window.location.search) window.history.replaceState(null, '', window.location.pathname)
   }
@@ -581,14 +591,28 @@ export default function Tournament() {
             createdAt: Date.now(),
             results: {},
             cloud: { id: ct.id, code: ct.code },
-          })
+          }, { kind: 'pickTable' })
         }}
       />
     )
   }
 
+  const setMyTable = (table: number | undefined) => {
+    setTournament(prev => {
+      if (!prev) return prev
+      const next = { ...prev, myTable: table }
+      saveTournament(next)
+      return next
+    })
+    setView({ kind: 'round' })
+  }
+
   if (view.kind === 'standings') {
     return <Standings tournament={tournament} m={m} back={() => setView({ kind: 'round' })} />
+  }
+
+  if (view.kind === 'pickTable') {
+    return <TablePicker tournament={tournament} m={m} onPick={t => setMyTable(t)} onAll={() => setMyTable(undefined)} />
   }
 
   if (view.kind === 'table') {
@@ -607,7 +631,7 @@ export default function Tournament() {
   if (view.kind === 'board') {
     const a = m.rounds[round - 1][view.table - 1]
     const key = resultKey(view.board, a.ns)
-    const backToTable = () => setView({ kind: 'table', table: view.table })
+    const backToTable = () => setView(tournament.myTable ? { kind: 'round' } : { kind: 'table', table: view.table })
     return (
       <BoardEntry
         key={key}
@@ -629,6 +653,31 @@ export default function Tournament() {
     )
   }
 
+  if (tournament.myTable && tournament.myTable <= m.tables) {
+    const table = tournament.myTable
+    return (
+      <MyTableView
+        tournament={tournament}
+        m={m}
+        table={table}
+        openBoard={(r, board) => {
+          setRound(r)
+          setView({ kind: 'board', table, board })
+        }}
+        openStandings={() => setView({ kind: 'standings' })}
+        onChangeTable={() => setView({ kind: 'pickTable' })}
+        onShowAll={() => setMyTable(undefined)}
+        codeBox={
+          tournament.cloud && (
+            <Card className="pt-1">
+              <CodeBox tournament={tournament} status={sync.status} pendingCount={sync.pendingCount} />
+            </Card>
+          )
+        }
+      />
+    )
+  }
+
   return (
     <RoundView
       tournament={tournament}
@@ -637,6 +686,7 @@ export default function Tournament() {
       setRound={setRound}
       openTable={table => setView({ kind: 'table', table })}
       openStandings={() => setView({ kind: 'standings' })}
+      openPicker={() => setView({ kind: 'pickTable' })}
       onLeave={() => replace(null)}
       onDelete={async () => {
         const c = tournament.cloud

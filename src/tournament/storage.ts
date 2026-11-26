@@ -18,6 +18,7 @@ export interface Tournament {
   results: Results
   cloud?: CloudInfo // yoksa turnuva sadece bu telefonda
   pending?: Pending // buluta henüz gönderilemeyen değişiklikler
+  myTable?: number // "Masam" modu: bu telefon hangi masada (yoksa tüm masalar görünür)
 }
 
 const KEY = 'bric-skor:tournament'
