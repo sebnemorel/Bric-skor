@@ -1,13 +1,16 @@
 import { useState } from 'react'
+import { cloudEnabled } from './cloud/api'
+import Archive from './components/Archive'
 import Calculator from './components/Calculator'
 import Tournament from './components/Tournament'
 import InstallBanner from './install/InstallBanner'
 import UpdatePrompt from './install/UpdatePrompt'
 
-type Tab = 'tournament' | 'calculator'
+type Tab = 'tournament' | 'archive' | 'calculator'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'tournament', label: 'Turnuva' },
+  ...(cloudEnabled ? [{ id: 'archive' as const, label: 'Arşiv' }] : []),
   { id: 'calculator', label: 'Hesaplayıcı' },
 ]
 
@@ -20,7 +23,10 @@ export default function App() {
 
       <InstallBanner />
 
-      <nav className="mb-4 grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm">
+      <nav
+        className="mb-4 grid gap-1 rounded-2xl bg-white p-1 shadow-sm"
+        style={{ gridTemplateColumns: `repeat(${TABS.length}, minmax(0, 1fr))` }}
+      >
         {TABS.map(t => (
           <button
             key={t.id}
@@ -35,7 +41,7 @@ export default function App() {
         ))}
       </nav>
 
-      {tab === 'tournament' ? <Tournament /> : <Calculator />}
+      {tab === 'tournament' ? <Tournament /> : tab === 'archive' ? <Archive /> : <Calculator />}
 
       <p className="mt-8 pb-4 text-center text-xs text-slate-400">Sürüm: {__BUILD_TIME__}</p>
 

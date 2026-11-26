@@ -10,7 +10,13 @@ import { BackButton, Card } from './ui'
 
 type Side = 'ns' | 'ew'
 
-export default function Standings({ tournament, m, back }: { tournament: Tournament; m: Movement; back: () => void }) {
+export default function Standings({ tournament, m, back, backLabel = 'Turlar', banner }: {
+  tournament: Tournament
+  m: Movement
+  back: () => void
+  backLabel?: string
+  banner?: React.ReactNode
+}) {
   const [side, setSide] = useState<Side>('ns')
   const [board, setBoard] = useState<number | null>(null)
   const [category, setCategory] = useState<Category | null>(null)
@@ -35,7 +41,8 @@ export default function Standings({ tournament, m, back }: { tournament: Tournam
 
   return (
     <div className="space-y-4">
-      <BackButton onClick={back}>Turlar</BackButton>
+      <BackButton onClick={back}>{backLabel}</BackButton>
+      {banner}
 
       <Card>
         <div className="text-lg font-bold">{tournament.name}</div>

@@ -18,6 +18,19 @@ function db(): SupabaseClient {
   return client
 }
 
+/** Turnuva bitirilmiş, skorlar kilitli (sunucu yazmayı reddetti). */
+export class LockedError extends Error {}
+
+export interface ArchiveEntry {
+  id: string
+  name: string
+  date: string
+  pairCount: number
+  boardsPerRound: number
+  movement: MovementKind | null
+  finishedAt: string
+}
+
 export interface CloudTournament {
   id: string
   code: string
@@ -26,6 +39,7 @@ export interface CloudTournament {
   pairCount: number
   boardsPerRound: number
   movement?: MovementKind | null
+  finishedAt?: string | null
 }
 
 /** Bu cihaza özel kalıcı bir kimlik (kimin skor girdiğini ayırt etmek için). */
@@ -67,6 +81,9 @@ export function explainError(message: string, error: unknown): string {
 
 function fail(message: string, error: unknown): never {
   console.error(message, error)
+  if ((error as { code?: string } | null)?.code === '42501') {
+    throw new LockedError('Turnuva bitirilmiş, skorlar kilitli.')
+  }
   throw new Error(explainError(message, error))
 }
 
@@ -102,6 +119,20 @@ export async function deleteTournament(id: string, adminSecret: string): Promise
   const { data, error } = await db().rpc('delete_tournament', { p_id: id, p_admin_secret: adminSecret })
   if (error) fail('Turnuva silinemedi.', error)
   return data === true
+}
+
+/** Turnuvayı bitirir (ya da finished=false ile yeniden açar). Kuran cihazın anahtarı ya da hakem şifresi gerekir. */
+export async function finishTournament(id: string, adminSecret: string, finished = true): Promise<boolean> {
+  const { data, error } = await db().rpc('finish_tournament', { p_id: id, p_admin_secret: adminSecret, p_finished: finished })
+  if (error) fail('Turnuva bitirilemedi.', error)
+  return data === true
+}
+
+/** Kulüp arşivi: biten turnuvalar, en yeni önce. */
+export async function listArchive(): Promise<ArchiveEntry[]> {
+  const { data, error } = await db().rpc('list_archive')
+  if (error) fail('Arşiv alınamadı.', error)
+  return (data as ArchiveEntry[] | null) ?? []
 }
 
 /** Hakem şifresini doğrular (yanlış denemeler sunucuda sayılır, 10'da kilitlenir). */

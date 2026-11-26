@@ -23,6 +23,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 - [x] Oyuncu isimleri ve kategoriler (Açık, Karışık, Kadın, Senyör, Genç), kategoriye göre sıralama
 - [ ] IMP hesaplama
 - [x] "Masam" modu: masadaki telefon sadece kendi masasını görür, turlar arası hareket talimatı verir
+- [x] Kulüp arşivi: hakem turnuvayı bitirir, skorlar kilitlenir, Arşiv sekmesinde herkes sonuçları görür
 - [x] Hakem şifresi: telefon değişse de yönetici yetkisi (turnuvayı silme) geri alınır; 10 yanlış denemede kilit
 - [x] Çoklu cihaz: 6 haneli turnuva kodu, her masa kendi telefonundan girer, canlı sıralama, internetsizken bekletme (Supabase)
 - [x] PWA (telefona kurulabilir, internetsiz çalışır, yeni sürüm çıkınca "Yenile" şeridi)
@@ -41,7 +42,7 @@ npm run build   # yayın için derleme
 ## Çoklu cihaz kurulumu (Supabase)
 
 1. [supabase.com](https://supabase.com)'da ücretsiz bir proje aç.
-2. SQL Editor'de sırayla `supabase/schema.sql`, `02_pairs.sql`, `03_howell.sql`, `04_movement.sql` ve `05_admin_pin.sql` dosyalarını çalıştır.
+2. SQL Editor'de sırayla `supabase/schema.sql`, `02_pairs.sql`, `03_howell.sql`, `04_movement.sql`, `05_admin_pin.sql` ve `06_archive.sql` dosyalarını çalıştır.
 3. `.env.example` dosyasını `.env.local` adıyla kopyala, Project URL ve publishable key'i yaz.
 4. Vercel'de aynı iki değişkeni (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) Environment Variables'a ekle.
 
@@ -82,6 +83,7 @@ src/
     Standings.tsx      # sıralama ve board detayları
     MyTable.tsx        # masa seçici ve "Masam" ekranı
     Pairs.tsx          # çiftler listesi ve isim düzenleme
+    Archive.tsx        # kulüp arşivi (biten turnuvalar)
     ui.tsx             # küçük ortak parçalar
   tr.ts                # Türkçe sayı ekleri (Masa 2'ye, Masa 3'ten)
   App.tsx              # sekmeler

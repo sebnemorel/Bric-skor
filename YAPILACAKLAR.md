@@ -6,7 +6,6 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 
 ## İyileştirmeler (ana plan bitince)
 
-- [ ] **Turnuva arşivi / takvim**: geçmiş turnuvalar silinmesin, liste halinde görünsün
 - [ ] **Herkese açık sonuç sayfası**: uygulama kurmadan linkle açılan, sadece okunan sıralama
 - [ ] **Oyuncu arama ve oyuncu sayfası**: bir oyuncunun tüm turnuvalardaki sonuçları
 
@@ -44,6 +43,7 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Matchpoint ve sıralama
 - [x] Canlı yayın: https://bric-skor-akdeniz.vercel.app
 - [x] Oyuncu isimleri ve kategoriler: hakem girer, çiftler düzeltebilir; sıralamada isim, kategori ve kategori filtresi
+- [x] Kulüp arşivi: turnuvayı bitir → skorlar kilitlenir → Arşiv sekmesinde herkese açık
 - [x] Hakem şifresi (isteğe bağlı) ve anlaşılır hata mesajları
 - [x] Masa ekranında "Turnuvadan çık"
 - [x] Sabit masalar (kulübün olağan düzeni): çiftler yerinde, her masa aynı boardları oynar (36'ya kadar), K-G/D-B sıralama

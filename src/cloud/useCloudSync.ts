@@ -10,7 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { cleanPair, type PairInfo } from '../tournament/pairs'
 import { resultKey, type BoardResult } from '../tournament/results'
 import { saveTournament, type Tournament } from '../tournament/storage'
-import { cloudEnabled, deleteResult, fetchPairs, fetchResults, subscribeResults, upsertPair, upsertResult } from './api'
+import { cloudEnabled, deleteResult, fetchPairs, fetchResults, LockedError, subscribeResults, upsertPair, upsertResult } from './api'
 import { applyRemoteChange, mergeNames, mergeResults } from './sync'
 
 export type SyncStatus = 'local' | 'connecting' | 'live' | 'offline'
@@ -61,7 +61,16 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
         })
         setReachable(true)
         return true
-      } catch {
+      } catch (e) {
+        if (e instanceof LockedError) {
+          // turnuva bitirilmiş: bu değişiklik artık gönderilemez, bekleyenlerden çıkar
+          modify(prev => {
+            const pending = { ...(prev.pending ?? {}) }
+            delete pending[key]
+            return { ...prev, pending, finished: true }
+          })
+          return true
+        }
         setReachable(false)
         return false
       }
@@ -82,7 +91,15 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
         })
         setReachable(true)
         return true
-      } catch {
+      } catch (e) {
+        if (e instanceof LockedError) {
+          modify(prev => {
+            const pendingNames = { ...(prev.pendingNames ?? {}) }
+            delete pendingNames[key]
+            return { ...prev, pendingNames, finished: true }
+          })
+          return true
+        }
         setReachable(false)
         return false
       }
@@ -151,6 +168,21 @@ export function useCloudSync(tournament: Tournament | null, setTournament: Sette
       setConnected(false)
     }
   }, [cloudId, modify, flush])
+
+  // Turnuva bitince son hali sunucudan bir kez daha çek (canlı yayını kaçıran telefonlar için)
+  const finished = Boolean(tournament?.finished)
+  useEffect(() => {
+    if (!cloudId || !finished) return
+    let cancelled = false
+    Promise.all([fetchResults(cloudId), fetchPairs(cloudId)])
+      .then(([results, names]) => {
+        if (!cancelled) modify(prev => ({ ...prev, results, names, pending: {}, pendingNames: {} }))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [cloudId, finished, modify])
 
   // 3) İnternet geri gelince ve belirli aralıklarla tekrar dene
   useEffect(() => {

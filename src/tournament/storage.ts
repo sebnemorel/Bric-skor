@@ -24,6 +24,7 @@ export interface Tournament {
   myTable?: number // "Masam" modu: bu telefon hangi masada (yoksa tüm masalar görünür)
   names?: PairNames // çift isimleri ve kategorileri ("NS-3" → { player1, player2, category })
   pendingNames?: Record<string, PairInfo> // buluta henüz gönderilemeyen isim değişiklikleri
+  finished?: boolean // turnuva bitirildi: skorlar kilitli, sadece sonuçlar görünür
 }
 
 const KEY = 'bric-skor:tournament'

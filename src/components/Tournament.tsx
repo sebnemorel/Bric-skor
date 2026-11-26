@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
-import { cloudEnabled, createTournament, deleteTournament, joinTournament, newAdminSecret, verifyAdminPin } from '../cloud/api'
+import {
+  cloudEnabled,
+  createTournament,
+  deleteTournament,
+  finishTournament,
+  joinTournament,
+  newAdminSecret,
+  verifyAdminPin,
+} from '../cloud/api'
 import { isValidCode, normalizeCode } from '../cloud/sync'
 import { useCloudSync, type SyncStatus } from '../cloud/useCloudSync'
 import {
@@ -460,7 +468,7 @@ function AdminClaim({ code, onClaim }: { code: string; onClaim: (pin: string) =>
 
 // ---------------- Tur tablosu ----------------
 
-function RoundView({ tournament, m, round, setRound, openTable, openStandings, openPicker, openPairs, onLeave, onDelete, onClaimAdmin, status, pendingCount }: {
+function RoundView({ tournament, m, round, setRound, openTable, openStandings, openPicker, openPairs, onLeave, onDelete, onFinish, onClaimAdmin, status, pendingCount }: {
   tournament: T
   m: Movement
   round: number
@@ -471,6 +479,7 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
   openPairs: () => void
   onLeave: () => void
   onDelete: () => void
+  onFinish: () => void
   onClaimAdmin: (pin: string) => void
   status: SyncStatus
   pendingCount: number
@@ -586,6 +595,22 @@ function RoundView({ tournament, m, round, setRound, openTable, openStandings, o
           }}
         >
           Yeni turnuva kur
+        </button>
+      )}
+      {isAdmin && (
+        <button
+          type="button"
+          className="h-12 w-full rounded-2xl bg-slate-800 font-semibold text-white"
+          onClick={() => {
+            if (
+              window.confirm(
+                'Turnuva bitirilsin mi? Skorlar kilitlenir, kimse değiştiremez. Sonuçlar kulüp arşivinde herkese görünür.',
+              )
+            )
+              onFinish()
+          }}
+        >
+          🏁 Turnuvayı bitir ve arşive koy
         </button>
       )}
       {isAdmin && (
@@ -783,7 +808,8 @@ export default function Tournament() {
             createdAt: Date.now(),
             results: {},
             cloud: { id: ct.id, code: ct.code },
-          }, { kind: 'pickTable' })
+            finished: Boolean(ct.finishedAt),
+          }, ct.finishedAt ? { kind: 'round' } : { kind: 'pickTable' })
         }}
       />
     )
@@ -797,6 +823,24 @@ export default function Tournament() {
       return next
     })
     setView({ kind: 'round' })
+  }
+
+  if (tournament.finished) {
+    return (
+      <Standings
+        tournament={tournament}
+        m={m}
+        back={() => {
+          if (window.confirm('Turnuvadan çıkılsın mı? Sonuçlar kulüp arşivinde kalır.')) replace(null)
+        }}
+        backLabel="Turnuvadan çık"
+        banner={
+          <Card className="text-sm text-slate-600">
+            🏁 Bu turnuva bitirildi, skorlar kilitli. Sonuçlar <b>Arşiv</b> sekmesinde de görünür.
+          </Card>
+        }
+      />
+    )
   }
 
   if (view.kind === 'standings') {
@@ -917,6 +961,25 @@ export default function Tournament() {
           const ok = await deleteTournament(c.id, c.adminSecret)
           if (!ok) window.alert('Turnuva sunucuda bulunamadı ya da zaten silinmiş.')
           replace(null)
+        } catch (e) {
+          window.alert((e as Error).message)
+        }
+      }}
+      onFinish={async () => {
+        const c = tournament.cloud
+        if (!c?.adminSecret) return
+        try {
+          const ok = await finishTournament(c.id, c.adminSecret)
+          if (!ok) {
+            window.alert('Turnuva bitirilemedi: yönetici yetkisi doğrulanamadı.')
+            return
+          }
+          setTournament(prev => {
+            if (!prev) return prev
+            const next = { ...prev, finished: true }
+            saveTournament(next)
+            return next
+          })
         } catch (e) {
           window.alert((e as Error).message)
         }
