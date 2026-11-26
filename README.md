@@ -92,3 +92,18 @@ src/
 ## Teknolojiler
 
 React, TypeScript, Vite, Tailwind CSS, Vitest, vite-plugin-pwa (Workbox), Supabase (Postgres + Realtime), Vercel
+
+## Kulüp yöneticisi parolası
+
+Arşivdeki herhangi bir turnuvayı silebilmek için bir yönetici parolası kullanılır.
+Parola bu depoda **yoktur**. Sadece Supabase SQL Editor'de, aşağıdaki komutla ayarlanır
+(`PAROLAN` yerine kendi parolanı yaz). Veritabanında bcrypt ile şifrelenmiş olarak tutulur:
+
+```sql
+insert into public.app_admin (id, master_hash)
+values (1, extensions.crypt('PAROLAN', extensions.gen_salt('bf')))
+on conflict (id) do update set master_hash = excluded.master_hash, failures = 0;
+```
+
+10 yanlış denemeden sonra yönetici girişi kilitlenir. Kilidi açmak için:
+`update public.app_admin set failures = 0 where id = 1;`

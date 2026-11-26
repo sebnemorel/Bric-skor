@@ -28,7 +28,8 @@ export interface ArchiveEntry {
   pairCount: number
   boardsPerRound: number
   movement: MovementKind | null
-  finishedAt: string
+  createdAt: string
+  finishedAt: string | null // null = devam ediyor
 }
 
 export interface CloudTournament {
@@ -133,6 +134,20 @@ export async function listArchive(): Promise<ArchiveEntry[]> {
   const { data, error } = await db().rpc('list_archive')
   if (error) fail('Arşiv alınamadı.', error)
   return (data as ArchiveEntry[] | null) ?? []
+}
+
+/** Kulüp yöneticisi parolasını doğrular (yanlışlar sunucuda sayılır, 10'da kilitlenir). */
+export async function verifyMaster(password: string): Promise<{ ok: boolean; locked: boolean; configured: boolean }> {
+  const { data, error } = await db().rpc('verify_master', { p_password: password })
+  if (error) fail('Parola kontrol edilemedi.', error)
+  return data as { ok: boolean; locked: boolean; configured: boolean }
+}
+
+/** Yönetici parolasıyla arşivdeki herhangi bir turnuvayı siler. */
+export async function adminDeleteTournament(id: string, password: string): Promise<boolean> {
+  const { data, error } = await db().rpc('admin_delete_tournament', { p_id: id, p_password: password })
+  if (error) fail('Turnuva silinemedi.', error)
+  return data === true
 }
 
 /** Hakem şifresini doğrular (yanlış denemeler sunucuda sayılır, 10'da kilitlenir). */

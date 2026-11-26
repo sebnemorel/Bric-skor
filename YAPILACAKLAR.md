@@ -55,3 +55,5 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] Çoklu cihaz (Supabase): 6 haneli kod / linkle katılma, ortak skorlar, canlı güncelleme, internetsizken bekletme
 - [x] "Masam" modu: masa seçici, otomatik tur geçişi, tur sonu hareket talimatı (boardlar / D-B nereye)
 - [x] Her tarayıcıda kurulum: "Telefona kur" banner'ı (Chrome/Edge'de tek dokunuş, diğerlerinde tarayıcıya özel talimat + "Chrome'da aç")
+- [x] Bütün turnuvalar otomatik arşivde, 24 saat sonra kendiliğinden kilit
+- [x] Kulüp yöneticisi parolasıyla arşivden turnuva silme
