@@ -37,6 +37,8 @@ export default function App() {
 
       {tab === 'tournament' ? <Tournament /> : <Calculator />}
 
+      <p className="mt-8 pb-4 text-center text-xs text-slate-400">Sürüm: {__BUILD_TIME__}</p>
+
       <UpdatePrompt />
     </main>
   )

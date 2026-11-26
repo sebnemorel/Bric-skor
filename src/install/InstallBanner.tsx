@@ -148,7 +148,7 @@ export default function InstallBanner() {
     <>
       {!dismissed ? (
         <div className="mb-4 flex items-center gap-3 rounded-2xl bg-emerald-700 p-3 text-white shadow-sm">
-          <img src="/pwa-192x192.png" alt="" className="h-10 w-10 rounded-xl ring-2 ring-white/40" />
+          <img src="/icon-192-v2.png" alt="" className="h-10 w-10 rounded-xl ring-2 ring-white/40" />
           <div className="flex-1 text-sm leading-tight">
             <div className="font-semibold">Telefona kur</div>
             <div className="opacity-80">Tam ekran açılır, internetsiz çalışır</div>

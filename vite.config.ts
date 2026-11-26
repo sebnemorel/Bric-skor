@@ -3,14 +3,27 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Sürüm etiketi: derlemenin yapıldığı an (Türkiye saati), uygulamanın en altında görünür
+const BUILD_TIME = new Date().toLocaleString('tr-TR', {
+  timeZone: 'Europe/Istanbul',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
 export default defineConfig({
+  define: {
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+  },
   plugins: [
     react(),
     tailwindcss(),
     // PWA: telefona "uygulama" olarak kurulabilmesi ve internetsiz çalışması için
     VitePWA({
       registerType: 'prompt', // yeni sürüm inince kullanıcıya "Yenile" şeridi gösterilir (UpdatePrompt.tsx)
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon-v2.svg', 'apple-touch-icon-v2.png'],
       manifest: {
         name: 'Briç Skor Akdeniz',
         short_name: 'Briç Skor', // ana ekranda simgenin altında görünen kısa ad
@@ -22,9 +35,9 @@ export default defineConfig({
         background_color: '#ecfdf5',
         theme_color: '#047857',
         icons: [
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-192-v2.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512-v2.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-512-v2.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
