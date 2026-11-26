@@ -3,6 +3,14 @@
 Duplicate briç turnuvaları için açık kaynak, telefondan kullanılabilen skor giriş sistemi.
 Pahalı skor cihazlarına ücretsiz bir alternatif olması hedefleniyor.
 
+**Canlı demo:** https://bric-skor-akdeniz.vercel.app
+
+### Telefona kurmak
+- **Android (Chrome):** Siteyi aç → ⋮ menü → *Uygulamayı yükle* / *Ana ekrana ekle*
+- **iPhone (Safari):** Siteyi aç → Paylaş → *Ana Ekrana Ekle*
+
+Kurulduktan sonra internet olmadan da çalışır.
+
 ## Özellikler
 
 - [x] Kontrat puanı hesaplama (kontr/rekontr, vulnerability, şlemler, batma cezaları)
@@ -13,7 +21,8 @@ Pahalı skor cihazlarına ücretsiz bir alternatif olması hedefleniyor.
 - [x] Matchpoint hesaplama, K-G / D-B sıralaması ve board detayları
 - [ ] IMP hesaplama
 - [ ] Çoklu cihaz (gerçek zamanlı senkronizasyon)
-- [ ] PWA ve Android uygulaması
+- [x] PWA (telefona kurulabilir, internetsiz çalışır)
+- [ ] Android uygulaması (Play Store)
 
 ## Çalıştırma
 
@@ -50,4 +59,4 @@ src/
 
 ## Teknolojiler
 
-React, TypeScript, Vite, Tailwind CSS, Vitest
+React, TypeScript, Vite, Tailwind CSS, Vitest, vite-plugin-pwa (Workbox), Vercel
