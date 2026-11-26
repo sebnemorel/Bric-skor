@@ -9,6 +9,7 @@ Pahalı skor cihazlarına ücretsiz bir alternatif olması hedefleniyor.
 - **Android (Chrome):** Siteyi aç → ⋮ menü → *Uygulamayı yükle* / *Ana ekrana ekle*
 - **iPhone (Safari):** Siteyi aç → Paylaş → *Ana Ekrana Ekle*
 
+Uygulamadaki **"Telefona kur"** butonu, kullandığın tarayıcıya göre yol gösterir.
 Kurulduktan sonra internet olmadan da çalışır.
 
 ## Özellikler
@@ -22,6 +23,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 - [ ] IMP hesaplama
 - [ ] Çoklu cihaz (gerçek zamanlı senkronizasyon)
 - [x] PWA (telefona kurulabilir, internetsiz çalışır)
+- [x] Her tarayıcı için kurulum yardımı (Safari, Samsung Internet, Firefox, telefonun kendi tarayıcısı)
 - [ ] Android uygulaması (Play Store)
 
 ## Çalıştırma
