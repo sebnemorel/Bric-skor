@@ -13,6 +13,15 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISS_KEY = 'bric-skor:install-dismissed'
+const INSTALLED_KEY = 'bric-skor:installed'
+
+function readInstalled() {
+  try {
+    return localStorage.getItem(INSTALLED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
 
 function readDismissed() {
   try {
@@ -33,7 +42,8 @@ function writeDismissed(v: boolean) {
 
 function useInstall() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null)
-  const [installed, setInstalled] = useState(() => isStandalone())
+  // kurulu uygulamada açıldıysa ya da bu tarayıcıda daha önce kurulduysa banner gösterme
+  const [installed, setInstalled] = useState(() => isStandalone() || readInstalled())
   const browser = useMemo(() => detectBrowser(navigator.userAgent), [])
   const guide = useMemo(() => installGuide(browser), [browser])
 
@@ -42,7 +52,14 @@ function useInstall() {
       e.preventDefault() // tarayıcının kendi küçük bildirimini değil, bizim butonu kullan
       setPromptEvent(e as BeforeInstallPromptEvent)
     }
-    const onInstalled = () => setInstalled(true)
+    const onInstalled = () => {
+      setInstalled(true)
+      try {
+        localStorage.setItem(INSTALLED_KEY, '1')
+      } catch {
+        // önemli değil
+      }
+    }
     window.addEventListener('beforeinstallprompt', onPrompt)
     window.addEventListener('appinstalled', onInstalled)
     return () => {
@@ -51,7 +68,11 @@ function useInstall() {
     }
   }, [])
 
-  const canInstall = !installed && (promptEvent !== null || guide !== null)
+  // Chrome kurulabilir olduğunu kendisi söyler (beforeinstallprompt). Söylemiyorsa uygulama zaten
+  // kuruludur ya da kurulamaz; bu yüzden Chrome'da sadece bu olay geldiyse banner gösterilir.
+  // Diğer tarayıcılar bunu söylemediği için onlarda talimat gösterilir.
+  const canInstall =
+    !installed && (promptEvent !== null || (guide !== null && browser !== 'chrome-android'))
   return { promptEvent, setPromptEvent, guide, browser, installed, canInstall }
 }
 
