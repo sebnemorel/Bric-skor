@@ -2,7 +2,7 @@
 
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js'
 import type { MovementKind } from '../tournament/movement'
-import type { PairInfo, PairNames } from '../tournament/pairs'
+import type { PairInfo, PairNames, PlayerCategory } from '../tournament/pairs'
 import { resultKey, type BoardResult, type Results } from '../tournament/results'
 import { fromRow, pairFromRow, pairToRow, toRow, type PairRow, type ResultRow } from './sync'
 
@@ -134,6 +134,60 @@ export async function listArchive(): Promise<ArchiveEntry[]> {
   const { data, error } = await db().rpc('list_archive')
   if (error) fail('Arşiv alınamadı.', error)
   return (data as ArchiveEntry[] | null) ?? []
+}
+
+// ---------------- Kayıtlı oyuncular ve hakem şifresi ----------------
+
+export interface Player {
+  mpNo: string
+  name: string
+  category: PlayerCategory | null
+}
+
+export type AuthResult = { ok: boolean; locked: boolean; configured: boolean }
+
+/** Kulüp hakem şifresini (ya da yönetici parolasını) doğrular. */
+export async function verifyTd(password: string): Promise<AuthResult> {
+  const { data, error } = await db().rpc('td_verify', { p_password: password })
+  if (error) fail('Şifre kontrol edilemedi.', error)
+  return data as AuthResult
+}
+
+export async function listPlayers(): Promise<Player[]> {
+  const { data, error } = await db().from('players').select('mp_no,name,category').order('name').limit(5000)
+  if (error) fail('Oyuncu listesi alınamadı.', error)
+  return (data as { mp_no: string; name: string; category: PlayerCategory | null }[]).map(r => ({
+    mpNo: r.mp_no,
+    name: r.name,
+    category: r.category,
+  }))
+}
+
+export async function upsertPlayer(password: string, p: Player): Promise<boolean> {
+  const { data, error } = await db().rpc('td_upsert_player', {
+    p_password: password,
+    p_mp_no: p.mpNo,
+    p_name: p.name,
+    p_category: p.category ?? '',
+  })
+  if (error) fail('Oyuncu kaydedilemedi.', error)
+  return data === true
+}
+
+export async function deletePlayer(password: string, mpNo: string): Promise<boolean> {
+  const { data, error } = await db().rpc('td_delete_player', { p_password: password, p_mp_no: mpNo })
+  if (error) fail('Oyuncu silinemedi.', error)
+  return data === true
+}
+
+/** Toplu ekleme; kaydedilen oyuncu sayısını döner (şifre yanlışsa -1). */
+export async function importPlayers(password: string, players: Player[]): Promise<number> {
+  const { data, error } = await db().rpc('td_import_players', {
+    p_password: password,
+    p_rows: players.map(p => ({ mp_no: p.mpNo, name: p.name, category: p.category ?? '' })),
+  })
+  if (error) fail('Oyuncular eklenemedi.', error)
+  return data as number
 }
 
 /** Kulüp yöneticisi parolasını doğrular (yanlışlar sunucuda sayılır, 10'da kilitlenir). */

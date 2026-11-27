@@ -94,6 +94,8 @@ function GuideSheet({ guide, onClose }: { guide: NonNullable<ReturnType<typeof i
         <h2 className="text-lg font-bold">Uygulamayı telefona kur</h2>
         <p className="mb-4 text-sm text-slate-500">{guide.title}</p>
 
+        {guide.note && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">⚠️ {guide.note}</p>}
+
         {guide.suggestChrome && (
           <div className="mb-5 space-y-2">
             <a
@@ -136,8 +138,26 @@ function GuideSheet({ guide, onClose }: { guide: NonNullable<ReturnType<typeof i
           ))}
         </ol>
 
+        {guide.copyLink && (
+          <button
+            type="button"
+            className="mt-4 h-11 w-full rounded-2xl border border-slate-300 text-sm font-medium"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(url)
+                setCopied(true)
+              } catch {
+                window.prompt('Linki kopyala:', url)
+              }
+            }}
+          >
+            {copied ? 'Link kopyalandı ✓' : '🔗 Linki kopyala'}
+          </button>
+        )}
+
         <p className="mt-5 text-xs text-slate-500">
-          Kurduktan sonra uygulama ana ekranda yeşil maça simgesiyle görünür ve internet olmadan da çalışır.
+          Kurduktan sonra uygulama ana ekranda lacivert-turuncu briç simgesiyle "Briç Skor" adıyla görünür ve internet olmadan da
+          çalışır.
         </p>
         <button type="button" onClick={onClose} className="mt-4 h-12 w-full rounded-2xl bg-slate-100 font-medium">
           Tamam

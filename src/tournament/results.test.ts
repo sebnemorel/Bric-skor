@@ -25,7 +25,7 @@ describe('sonuç kaydı', () => {
   })
 
   it('D-B deklaranken skor negatif', () => {
-    // Doğu 4♠ yaparsa (yeşil) D-B +420, K-G -420
+    // board 2: K-G kırmızı, D-B yeşil → Doğu 4♠ yaparsa D-B +420, K-G -420
     expect(makeResult(t1, 1, 2, entry({ declarer: 'E' })).nsScore).toBe(-420)
   })
 
@@ -64,21 +64,17 @@ describe('sonuç kaydı', () => {
     expect(tableProgress(t1, results)).toEqual({ done: 2, total: 3 })
   })
 
-  it('yeşil/kırmızı seçilmezse yeşil sayılır', () => {
-    expect(entryScore(entry())).toBe(420)
-    expect(entryScore(entry({ vul: false }))).toBe(420)
-    expect(entryScore(entry({ vul: true }))).toBe(620)
-    // D-B oynadı, kırmızı, 2 batı kontrlu → K-G +500
-    expect(entryScore(entry({ declarer: 'E', vul: true, result: -2, contract: { level: 4, strain: 'S', doubling: 'X' } }))).toBe(500)
+  it('yeşil/kırmızı board numarasından gelir', () => {
+    expect(entryScore(1, entry())).toBe(420) // board 1: herkes yeşil
+    expect(entryScore(2, entry())).toBe(620) // board 2: K-G kırmızı
+    // board 3: D-B kırmızı; Doğu 4♠X 2 batı → K-G +500
+    expect(entryScore(3, entry({ declarer: 'E', result: -2, contract: { level: 4, strain: 'S', doubling: 'X' } }))).toBe(500)
   })
 
-  it('kayıt rakip onaylı ve yeşil/kırmızı bilgisiyle tutulur', () => {
-    const red = makeResult(t1, 1, 1, entry({ vul: true }))
-    expect(red).toMatchObject({ confirmed: true, vul: true, nsScore: 620 })
-    expect(resultToEntry(red).vul).toBe(true)
-    const none = makeResult(t1, 1, 1, entry())
-    expect(none.vul).toBeUndefined()
-    expect(resultToEntry(none).vul).toBeNull()
+  it('kayıt rakip onaylı tutulur', () => {
+    const r = makeResult(t1, 1, 2, entry())
+    expect(r).toMatchObject({ confirmed: true, nsScore: 620 })
+    expect(r.vul).toBeUndefined()
   })
 
   it('boardSlots: board hangi masalarda oynanıyor', () => {

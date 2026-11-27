@@ -1,5 +1,5 @@
 // Masa sonuçları: bir boardun bir masada nasıl oynandığı.
-import { scoreForNSWithVul, type Contract, type Seat } from '../scoring/score'
+import { scoreForNS, type Contract, type Seat } from '../scoring/score'
 import type { TableAssignment } from './movement'
 
 /** Skor girişi formunun değeri (hem hesaplayıcıda hem turnuvada kullanılır). */
@@ -8,8 +8,6 @@ export interface ContractEntry {
   contract: Contract
   declarer: Seat
   result: number // gerekenden fark: +1, 0, -2 ...
-  /** Deklaran kırmızı mı (true) yeşil mi (false)? null = seçilmedi → yeşil sayılır. */
-  vul: boolean | null
 }
 
 export interface BoardResult {
@@ -24,7 +22,7 @@ export interface BoardResult {
   tricks?: number
   nsScore: number // K-G açısından skor (D-B için tersi)
   enteredAt: number
-  /** Deklaran kırmızıda mıydı? (yoksa: seçilmedi, yeşil sayıldı) */
+  /** Eski kayıtlar: yeşil/kırmızı elle seçildiği dönemden. Artık board numarasından gelir. */
   vul?: boolean
   /** Rakip onayladı: artık sadece hakem/yönetici değiştirebilir. */
   confirmed?: boolean
@@ -37,17 +35,16 @@ export const DEFAULT_ENTRY: ContractEntry = {
   contract: { level: 4, strain: 'S', doubling: '' },
   declarer: 'S',
   result: 0,
-  vul: null,
 }
 
 /** Bir board her K-G çifti tarafından en fazla bir kez oynanır; anahtar buna göre. */
 export const resultKey = (board: number, ns: number) => `${board}-${ns}`
 
-/** Formdaki girişin K-G skoru. Yeşil/kırmızı seçilmediyse yeşil (vulnerable değil) sayılır. */
-export function entryScore(entry: ContractEntry): number {
+/** Formdaki girişin K-G skoru. Yeşil/kırmızı board numarasından gelir. */
+export function entryScore(board: number, entry: ContractEntry): number {
   if (entry.passed) return 0
   const tricks = entry.contract.level + 6 + entry.result
-  return scoreForNSWithVul(entry.declarer, entry.contract, tricks, entry.vul === true)
+  return scoreForNS(board, entry.declarer, entry.contract, tricks)
 }
 
 export function makeResult(
@@ -68,9 +65,8 @@ export function makeResult(
     contract: entry.contract,
     declarer: entry.declarer,
     tricks: entry.contract.level + 6 + entry.result,
-    nsScore: entryScore(entry),
+    nsScore: entryScore(board, entry),
   }
-  if (entry.vul !== null) r.vul = entry.vul
   return r
 }
 
@@ -84,7 +80,6 @@ export function resultToEntry(r: BoardResult): ContractEntry {
     contract: r.contract,
     declarer: r.declarer,
     result: r.tricks - (r.contract.level + 6),
-    vul: r.vul ?? null,
   }
 }
 

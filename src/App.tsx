@@ -4,6 +4,8 @@ import Archive from './components/Archive'
 import Calculator from './components/Calculator'
 import Tournament from './components/Tournament'
 import InstallBanner from './install/InstallBanner'
+import InstallQR from './install/InstallQR'
+import TdPanel from './td/TdPanel'
 import UpdatePrompt from './install/UpdatePrompt'
 
 type Tab = 'tournament' | 'archive' | 'calculator'
@@ -14,8 +16,24 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'calculator', label: 'Hesaplayıcı' },
 ]
 
+// /hakem adresi: bilgisayardaki hakem paneli
+const isTdPanel = window.location.pathname.replace(/\/+$/, '') === '/hakem'
+
 export default function App() {
+  return isTdPanel ? <TdPanel /> : <PhoneApp />
+}
+
+function PhoneApp() {
   const [tab, setTab] = useState<Tab>('tournament')
+  const [showQR, setShowQR] = useState(false)
+
+  if (showQR) {
+    return (
+      <main className="mx-auto min-h-screen max-w-md bg-emerald-50 p-4 text-slate-900 print:bg-white">
+        <InstallQR back={() => setShowQR(false)} />
+      </main>
+    )
+  }
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-emerald-50 p-4 text-slate-900">
@@ -43,7 +61,17 @@ export default function App() {
 
       {tab === 'tournament' ? <Tournament /> : tab === 'archive' ? <Archive /> : <Calculator />}
 
-      <p className="mt-8 pb-4 text-center text-xs text-slate-400">Sürüm: {__BUILD_TIME__}</p>
+      <div className="mt-8 pb-4 text-center text-xs text-slate-400">
+        <button type="button" onClick={() => setShowQR(true)} className="mb-2 font-medium text-emerald-800">
+          📷 Kurulum QR kodu
+        </button>
+        {cloudEnabled && (
+          <a href="/hakem" className="mb-2 ml-4 font-medium text-emerald-800">
+            🖥 Hakem paneli
+          </a>
+        )}
+        <p>Sürüm: {__BUILD_TIME__}</p>
+      </div>
 
       <UpdatePrompt />
     </main>

@@ -114,12 +114,14 @@ export interface PairRow {
   player1: string
   player2: string
   category: Category | null
+  mp1?: string | null
+  mp2?: string | null
 }
 
 export function pairToRow(tournamentId: string, key: string, p: PairInfo): PairRow {
   const [side, num] = key.split('-')
   const c = cleanPair(p)
-  return {
+  const row: PairRow = {
     tournament_id: tournamentId,
     side: side as Side,
     number: Number(num),
@@ -127,12 +129,22 @@ export function pairToRow(tournamentId: string, key: string, p: PairInfo): PairR
     player2: c.player2,
     category: c.category ?? null,
   }
+  // numaralar sadece varsa gönderilir (yoksa sunucudaki değer korunur; eski sunucuyla da uyumlu)
+  if (c.mp1) row.mp1 = c.mp1
+  if (c.mp2) row.mp2 = c.mp2
+  return row
 }
 
 export function pairFromRow(row: PairRow): { key: string; info: PairInfo } {
   return {
     key: pairKey(row.side, row.number),
-    info: cleanPair({ player1: row.player1, player2: row.player2, category: row.category ?? undefined }),
+    info: cleanPair({
+      player1: row.player1,
+      player2: row.player2,
+      category: row.category ?? undefined,
+      mp1: row.mp1 ?? undefined,
+      mp2: row.mp2 ?? undefined,
+    }),
   }
 }
 

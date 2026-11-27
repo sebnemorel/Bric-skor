@@ -22,6 +22,12 @@ const UA = {
     'Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.0.0 Mobile Safari/537.36',
   desktop:
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  iosInstagram:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 357.0.0.25.101',
+  iosWebView:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+  androidWhatsApp:
+    'Mozilla/5.0 (Linux; Android 14; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.0.0 Mobile Safari/537.36 WhatsApp/2.24',
 }
 
 describe('tarayıcı algılama', () => {
@@ -34,7 +40,10 @@ describe('tarayıcı algılama', () => {
     ['miui', 'miui'],
     ['huawei', 'huawei'],
     ['opera', 'opera'],
-    ['webview', 'other-android'],
+    ['webview', 'android-inapp'],
+    ['iosInstagram', 'ios-inapp'],
+    ['iosWebView', 'ios-inapp'],
+    ['androidWhatsApp', 'android-inapp'],
     ['desktop', 'desktop'],
   ] as const)('%s → %s', (key, expected) => {
     expect(detectBrowser(UA[key])).toBe(expected)

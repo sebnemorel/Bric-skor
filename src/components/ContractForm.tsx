@@ -88,33 +88,6 @@ export default function ContractForm({ value, onChange }: {
             </div>
           </Card>
 
-          <Card className="space-y-2">
-            <div className="flex items-baseline justify-between">
-              <div className="text-sm font-medium text-slate-500">Deklaran tarafı</div>
-              <div className="text-xs text-slate-400">Seçilmezse yeşil sayılır</div>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => set({ vul: value.vul === false ? null : false })}
-                className={`h-12 rounded-xl text-base font-semibold ${
-                  value.vul === false ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800'
-                }`}
-              >
-                Yeşil
-              </button>
-              <button
-                type="button"
-                onClick={() => set({ vul: value.vul === true ? null : true })}
-                className={`h-12 rounded-xl text-base font-semibold ${
-                  value.vul === true ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700'
-                }`}
-              >
-                Kırmızı
-              </button>
-            </div>
-          </Card>
-
           <Card>
             <div className="mb-2 text-sm font-medium text-slate-500">Sonuç</div>
             <div className="flex items-center justify-between">

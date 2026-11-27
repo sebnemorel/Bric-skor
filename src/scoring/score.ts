@@ -112,12 +112,6 @@ export function isVulnerable(board: number, declarer: Seat): boolean {
   return vulnerability === side
 }
 
-/** Yeşil/kırmızı elle seçildiğinde: skoru K-G tarafından verir. */
-export function scoreForNSWithVul(declarer: Seat, contract: Contract, tricks: number, vulnerable: boolean): number {
-  const s = scoreContract(contract, tricks, vulnerable)
-  return declarer === 'N' || declarer === 'S' ? s : -s
-}
-
 /** Skoru Kuzey-Güney tarafından ifade eder (skor fişlerinde standart). */
 export function scoreForNS(board: number, declarer: Seat, contract: Contract, tricks: number): number {
   const s = scoreContract(contract, tricks, isVulnerable(board, declarer))

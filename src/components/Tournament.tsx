@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   cloudEnabled,
   createTournament,
@@ -755,10 +755,10 @@ function BoardEntry({ tournament, m, round, table, board, isAdmin, back, save, r
         <BackButton onClick={() => setStep('enter')}>Düzelt</BackButton>
         {header}
         <Card className="bg-amber-50 text-sm text-amber-900">
-          📱 Telefonu <b>rakip çifte</b> verin. Kontrat, oynayan, yeşil/kırmızı, sonuç ve puan doğruysa onaylasın.
+          📱 Telefonu <b>rakip çifte</b> verin. Kontrat, oynayan, sonuç ve puan doğruysa onaylasın.
           Onaydan sonra skoru sadece hakem değiştirebilir.
         </Card>
-        <ResultSummary entry={entry} nsScore={entryScore(entry)} nsLabel={nsLabel} ewLabel={ewLabel} />
+        <ResultSummary board={board} entry={entry} nsScore={entryScore(board, entry)} nsLabel={nsLabel} ewLabel={ewLabel} />
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <button
             type="button"
@@ -791,7 +791,7 @@ function BoardEntry({ tournament, m, round, table, board, isAdmin, back, save, r
         <Card className={`text-center text-sm ${justSaved ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600'}`}>
           {justSaved ? '✓ Onaylandı ve kaydedildi.' : '🔒 Bu skor onaylandı.'} Değişiklik gerekirse hakeme söyleyin.
         </Card>
-        <ResultSummary entry={resultToEntry(existing)} nsScore={existing.nsScore} nsLabel={nsLabel} ewLabel={ewLabel} />
+        <ResultSummary board={board} entry={resultToEntry(existing)} nsScore={existing.nsScore} nsLabel={nsLabel} ewLabel={ewLabel} />
         <button
           type="button"
           className="h-14 w-full rounded-2xl border border-emerald-700 bg-white text-lg font-semibold text-emerald-800"
@@ -831,7 +831,7 @@ function BoardEntry({ tournament, m, round, table, board, isAdmin, back, save, r
       {header}
 
       <ContractForm value={entry} onChange={setEntry} />
-      <ScoreBoxes nsScore={entryScore(entry)} />
+      <ScoreBoxes nsScore={entryScore(board, entry)} />
 
       {adminEdit ? (
         <>
@@ -880,11 +880,80 @@ type View =
   | { kind: 'pairs' }
   | { kind: 'editPair'; side: Side; number: number; from: 'round' | 'pairs' }
 
+/** Sunucudan gelen turnuva bilgisinden bu telefondaki turnuva kaydını oluşturur. */
+function fromCloud(ct: NonNullable<Awaited<ReturnType<typeof joinTournament>>>, myTable?: number): T {
+  return {
+    name: ct.name,
+    date: ct.date,
+    pairCount: ct.pairCount,
+    boardsPerRound: ct.boardsPerRound,
+    movement: ct.movement ?? undefined,
+    createdAt: Date.now(),
+    results: {},
+    cloud: { id: ct.id, code: ct.code },
+    finished: Boolean(ct.finishedAt),
+    myTable,
+  }
+}
+
+/** Masa QR'ı: adres ?kod=ABC234&masa=3 ise o turnuvaya katılıp masayı seç. */
+function readTableLink(): { code: string; table: number } | null {
+  const q = new URLSearchParams(window.location.search)
+  const code = normalizeCode(q.get('kod') ?? '')
+  const table = Number(q.get('masa'))
+  return isValidCode(code) && Number.isInteger(table) && table >= 1 ? { code, table } : null
+}
+
 export default function Tournament() {
-  const [tournament, setTournament] = useState<T | null>(() => loadTournament())
+  const [tournament, setTournament] = useState<T | null>(() => {
+    const t = loadTournament()
+    const link = readTableLink()
+    // zaten bu turnuvadaysa sadece masayı seç
+    if (t && link && t.cloud?.code === link.code) {
+      const next = { ...t, myTable: link.table }
+      saveTournament(next)
+      return next
+    }
+    return t
+  })
   const [round, setRound] = useState(1)
   const [view, setView] = useState<View>({ kind: 'round' })
+  const [linkError, setLinkError] = useState<string | null>(null)
   const sync = useCloudSync(tournament, setTournament)
+
+  // Masa QR'ıyla açıldıysa: katıl ve masayı seç (bir kez)
+  const linkHandled = useRef(false)
+  useEffect(() => {
+    if (linkHandled.current) return
+    linkHandled.current = true
+    const link = readTableLink()
+    if (!link || !cloudEnabled) return
+    const clearUrl = () => window.history.replaceState(null, '', window.location.pathname)
+    const current = loadTournament()
+    if (current?.cloud?.code === link.code) {
+      clearUrl() // masa yukarıda, ilk açılışta seçildi
+      return
+    }
+    if (current && !window.confirm(`Bu telefon şu an "${current.name}" turnuvasında. Masa ${link.table} için yeni turnuvaya geçilsin mi?`)) {
+      clearUrl()
+      return
+    }
+    joinTournament(link.code)
+      .then(ct => {
+        if (!ct) {
+          setLinkError('Bu QR\'daki turnuva bulunamadı. Hakeme sorun.')
+          return
+        }
+        const tables = createMovement(ct.pairCount, ct.boardsPerRound, ct.movement).tables
+        const t = fromCloud(ct, ct.finishedAt || link.table > tables ? undefined : link.table)
+        saveTournament(t)
+        setTournament(t)
+        setRound(1)
+        setView({ kind: 'round' })
+      })
+      .catch(e => setLinkError((e as Error).message))
+      .finally(clearUrl)
+  }, [])
 
   const m = useMemo(
     () => (tournament ? createMovement(tournament.pairCount, tournament.boardsPerRound, tournament.movement) : null),
@@ -902,7 +971,9 @@ export default function Tournament() {
 
   if (!tournament || !m) {
     return (
-      <Start
+      <>
+        {linkError && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{linkError}</p>}
+        <Start
         onCreate={async (input, shared, pin) => {
           const t: T = { ...input, createdAt: Date.now(), results: {} }
           if (shared && cloudEnabled) {
@@ -915,19 +986,10 @@ export default function Tournament() {
         onJoin={async code => {
           const ct = await joinTournament(code)
           if (!ct) throw new Error('Bu kodla bir turnuva bulunamadı. Kodu kontrol et.')
-          replace({
-            name: ct.name,
-            date: ct.date,
-            pairCount: ct.pairCount,
-            boardsPerRound: ct.boardsPerRound,
-            movement: ct.movement ?? undefined,
-            createdAt: Date.now(),
-            results: {},
-            cloud: { id: ct.id, code: ct.code },
-            finished: Boolean(ct.finishedAt),
-          }, ct.finishedAt ? { kind: 'round' } : { kind: 'pickTable' })
+          replace(fromCloud(ct), ct.finishedAt ? { kind: 'round' } : { kind: 'pickTable' })
         }}
       />
+      </>
     )
   }
 

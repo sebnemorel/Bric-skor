@@ -1,4 +1,5 @@
 // Skor özeti (rakip onayı için) ve bir boardun bütün masalardaki sonuçları.
+import { isVulnerable } from '../scoring/score'
 import type { Movement } from '../tournament/movement'
 import { boardSlots, formatResult, resultKey, type ContractEntry, type Results } from '../tournament/results'
 import { Card } from './ui'
@@ -20,7 +21,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 /** Rakibin kontrol edeceği özet: kontrat, deklaran, yeşil/kırmızı, sonuç, puan. */
-export function ResultSummary({ entry, nsScore, nsLabel, ewLabel }: {
+export function ResultSummary({ board, entry, nsScore, nsLabel, ewLabel }: {
+  board: number
   entry: ContractEntry
   nsScore: number
   nsLabel: string
@@ -45,12 +47,10 @@ export function ResultSummary({ entry, nsScore, nsLabel, ewLabel }: {
             {SEAT[entry.declarer]} <span className="text-sm font-normal text-slate-500">({declSide})</span>
           </Row>
           <Row label="Yeşil / Kırmızı">
-            {entry.vul === true ? (
+            {isVulnerable(board, entry.declarer) ? (
               <span className="rounded-full bg-red-600 px-3 py-0.5 text-base text-white">Kırmızı</span>
             ) : (
-              <span className="rounded-full bg-emerald-600 px-3 py-0.5 text-base text-white">
-                Yeşil{entry.vul === null && <span className="font-normal opacity-80"> (seçilmedi)</span>}
-              </span>
+              <span className="rounded-full bg-emerald-600 px-3 py-0.5 text-base text-white">Yeşil</span>
             )}
           </Row>
           <Row label="Sonuç">

@@ -14,7 +14,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 
 ## Özellikler
 
-- [x] Kontrat puanı hesaplama (kontr/rekontr, vulnerability, şlemler, batma cezaları)
+- [x] Kontrat puanı hesaplama (kontr/rekontr, vulnerability, işlemler, batma cezaları)
 - [x] Board numarasından dağıtıcı ve vulnerability
 - [x] Mobil uyumlu skor hesaplayıcı ekranı
 - [x] Turnuva kurulumu: Sabit masalar (çiftler yerinde, her masa aynı boardları oynar), Howell (4 çift), Mitchell / skip Mitchell (5+ çift)
@@ -125,5 +125,22 @@ Yönetici değişiklikleri (turnuva silme, skor düzeltme) kaydedilmeden önce g
 ```sql
 update public.app_admin
 set answer_hash = extensions.crypt(public.norm_answer('CEVAP'), extensions.gen_salt('bf')), failures = 0
+where id = 1;
+```
+
+## Hakem paneli (bilgisayar)
+
+`/hakem` adresinde açılır (ör. `https://bric-skor-akdeniz.vercel.app/hakem`). Kulüp hakem şifresiyle girilir.
+
+- **Oyuncular:** master point numarası, ad soyad, kategori. Tek tek ya da Excel'den yapıştırarak toplu eklenir.
+- **Turnuva:** hareket, çift ve board sayısı; çiftler numarayla seçilir, çift kategorisi otomatik hesaplanır.
+- **Masa QR'ları:** her masa telefonu kendi QR'ını okutunca doğrudan o turnuvaya ve masaya bağlanır.
+
+Kulüp hakem şifresi bu depoda **yoktur**. `10_players_td.sql` çalıştırıldıktan sonra Supabase SQL Editor'de ayarlanır
+(`SIFRE` yerine şifreyi yaz). Kulüp yöneticisi parolası da hakem paneline girer.
+
+```sql
+update public.app_admin
+set td_hash = extensions.crypt('SIFRE', extensions.gen_salt('bf')), td_failures = 0
 where id = 1;
 ```

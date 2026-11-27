@@ -68,7 +68,7 @@ export default function MasterEditor({ tournamentId, name, m, results, password,
           <div className="text-xs text-slate-500"><BoardMeta board={board} /></div>
         </Card>
         <ContractForm value={entry} onChange={setEntry} />
-        <ScoreBoxes nsScore={entryScore(entry)} />
+        <ScoreBoxes nsScore={entryScore(board, entry)} />
         {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <button
           type="button"

@@ -9,7 +9,26 @@ export interface PairInfo {
   player1: string
   player2: string
   category?: Category
+  /** Kayıtlı oyuncuların master point numaraları (hakem panelinden seçildiyse) */
+  mp1?: string
+  mp2?: string
 }
+
+/** Kayıtlı oyuncunun kategorisi (bireysel). */
+export type PlayerCategory = 'Kadın' | 'Senyör' | 'Genç'
+export const PLAYER_CATEGORIES: PlayerCategory[] = ['Kadın', 'Senyör', 'Genç']
+
+/**
+ * İki oyuncunun kategorisinden çiftin kategorisi:
+ * ikisi de Kadın/Senyör/Genç → o kategori; biri Kadın diğeri değil → Karışık; yoksa Açık.
+ */
+export function pairCategoryFromPlayers(a?: PlayerCategory | null, b?: PlayerCategory | null): Category {
+  if (a && a === b) return a
+  if ((a === 'Kadın') !== (b === 'Kadın')) return 'Karışık'
+  return 'Açık'
+}
+
+export const isMpNo = (s: string) => /^[0-9]{1,10}$/.test(s.trim())
 
 /** anahtar: "NS-3", "EW-5" */
 export type PairNames = Record<string, PairInfo>
@@ -34,6 +53,8 @@ export function cleanPair(p: PairInfo): PairInfo {
   const clip = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, 60)
   const out: PairInfo = { player1: clip(p.player1), player2: clip(p.player2) }
   if (p.category && (CATEGORIES as readonly string[]).includes(p.category)) out.category = p.category
+  if (p.mp1 && isMpNo(p.mp1)) out.mp1 = p.mp1.trim()
+  if (p.mp2 && isMpNo(p.mp2)) out.mp2 = p.mp2.trim()
   return out
 }
 
