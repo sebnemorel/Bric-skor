@@ -14,7 +14,7 @@ Kurulduktan sonra internet olmadan da çalışır.
 
 ## Özellikler
 
-- [x] Kontrat puanı hesaplama (kontr/rekontr, vulnerability, şlemler, batma cezaları)
+- [x] Kontrat puanı hesaplama (kontr/rekontr, vulnerability, işlemler, batma cezaları)
 - [x] Board numarasından dağıtıcı ve vulnerability
 - [x] Mobil uyumlu skor hesaplayıcı ekranı
 - [x] Turnuva kurulumu: Sabit masalar (çiftler yerinde, her masa aynı boardları oynar), Howell (4 çift), Mitchell / skip Mitchell (5+ çift)
