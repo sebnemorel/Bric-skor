@@ -1,10 +1,10 @@
 // Hakem paneli · Kayıtlı oyuncular: master point numarası, ad soyad, kategori.
 import { useMemo, useState } from 'react'
 import { deletePlayer, importPlayers, upsertPlayer, type Player } from '../cloud/api'
-import { isMpNo, PLAYER_CATEGORIES, type PlayerCategory } from '../tournament/pairs'
+import { cleanPlayerCategories, isMpNo, PLAYER_CATEGORIES, type PlayerCategory } from '../tournament/pairs'
 import { parsePlayers } from './parsePlayers'
 
-const EMPTY = { mpNo: '', name: '', category: '' as PlayerCategory | '' }
+const EMPTY = { mpNo: '', name: '', categories: [] as PlayerCategory[] }
 
 export default function PlayersTab({ players, password, reload }: {
   players: Player[]
@@ -42,7 +42,7 @@ export default function PlayersTab({ players, password, reload }: {
 
   const save = () =>
     run(async () => {
-      const ok = await upsertPlayer(password, { mpNo: form.mpNo.trim(), name: form.name, category: form.category || null })
+      const ok = await upsertPlayer(password, { mpNo: form.mpNo.trim(), name: form.name, categories: form.categories })
       if (!ok) throw new Error('Kaydedilemedi: hakem şifresi kabul edilmedi.')
       const text = `${form.name.trim()} ${existing ? 'güncellendi' : 'eklendi'}.`
       setForm(EMPTY)
@@ -77,21 +77,32 @@ export default function PlayersTab({ players, password, reload }: {
             />
           </label>
           <div>
-            <span className="text-sm text-slate-500">Kategori</span>
+            <span className="text-sm text-slate-500">Kategoriler (birden fazla seçilebilir)</span>
             <div className="mt-1 grid grid-cols-4 gap-1.5">
-              {(['', ...PLAYER_CATEGORIES] as const).map(c => (
-                <button
-                  key={c || 'yok'}
-                  type="button"
-                  onClick={() => setForm({ ...form, category: c })}
-                  className={`h-10 rounded-xl border text-sm font-medium ${
-                    form.category === c ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-300 bg-white'
-                  }`}
-                >
-                  {c || 'Yok'}
-                </button>
-              ))}
+              {PLAYER_CATEGORIES.map(c => {
+                const on = form.categories.includes(c)
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        categories: on ? form.categories.filter(x => x !== c) : cleanPlayerCategories([...form.categories, c], c),
+                      })
+                    }
+                    className={`h-10 rounded-xl border text-sm font-medium ${
+                      on ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {on && '✓ '}
+                    {c}
+                  </button>
+                )
+              })}
             </div>
+            <p className="mt-1 text-xs text-slate-500">Kadın ya da Erkek; gerekirse Senyör ve/veya Genç de seç.</p>
           </div>
           {existing && !editing && (
             <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
@@ -137,7 +148,7 @@ export default function PlayersTab({ players, password, reload }: {
             <>
               <textarea
                 className="h-40 w-full rounded-xl border border-slate-300 p-2 font-mono text-sm"
-                placeholder={'1234\tAyşe Yılmaz\tKadın\n2001;Mehmet Kaya;Senyör\n3005,Ali Can'}
+                placeholder={'1234\tAyşe Yılmaz\tKadın\n2001;Mehmet Kaya;Erkek Senyör\n3005,Ali Can,Erkek,Genç'}
                 value={bulk}
                 onChange={e => setBulk(e.target.value)}
               />
@@ -207,14 +218,14 @@ export default function PlayersTab({ players, password, reload }: {
                 <tr key={p.mpNo} className={`border-t border-slate-100 ${editing === p.mpNo ? 'bg-emerald-50' : ''}`}>
                   <td className="px-4 py-2 font-mono">{p.mpNo}</td>
                   <td className="px-4 py-2 font-medium">{p.name}</td>
-                  <td className="px-4 py-2 text-sm text-slate-600">{p.category ?? '–'}</td>
+                  <td className="px-4 py-2 text-sm text-slate-600">{p.categories.length ? p.categories.join(', ') : '–'}</td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <button
                       type="button"
                       className="mr-3 text-sm font-medium text-emerald-800"
                       onClick={() => {
                         setEditing(p.mpNo)
-                        setForm({ mpNo: p.mpNo, name: p.name, category: p.category ?? '' })
+                        setForm({ mpNo: p.mpNo, name: p.name, categories: p.categories })
                       }}
                     >
                       Düzelt

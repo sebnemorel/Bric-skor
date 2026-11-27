@@ -1,8 +1,17 @@
-// Kulüp yöneticisi: arşivdeki (bitmiş olsa bile) bir turnuvanın skorlarını düzeltir.
+// Skor düzeltme ekranı: board seç → masaya dokun → düzelt/sil.
+// Arşivde kulüp yöneticisi, hakem panelinde hakem kullanır; kaydetme işi `save` ile dışarıdan verilir.
 import { useState } from 'react'
-import { masterWriteResult } from '../cloud/api'
 import type { Movement } from '../tournament/movement'
-import { DEFAULT_ENTRY, entryScore, makeResult, resultKey, resultToEntry, type ContractEntry, type Results } from '../tournament/results'
+import {
+  DEFAULT_ENTRY,
+  entryScore,
+  makeResult,
+  resultKey,
+  resultToEntry,
+  type BoardResult,
+  type ContractEntry,
+  type Results,
+} from '../tournament/results'
 import { BoardMeta } from './BoardHeader'
 import { BoardAllResults } from './BoardResultViews'
 import ContractForm from './ContractForm'
@@ -10,19 +19,19 @@ import { BackButton, Card, ScoreBoxes } from './ui'
 
 type Slot = { round: number; table: number; ns: number }
 
-export default function MasterEditor({ tournamentId, name, m, results, password, getAnswer, onResults, back }: {
-  tournamentId: string
+export default function MasterEditor({ name, m, results, save, onResults, back, backLabel = 'Sıralama', initialBoard }: {
   name: string
   m: Movement
   results: Results
-  password: string
-  /** Güvenlik sorusunun cevabı (gerekirse sorar); vazgeçilirse null. */
-  getAnswer: () => Promise<string | null>
+  /** Sunucuya yazar (r = null → siler). true: kaydedildi, false: yetki reddedildi, null: vazgeçildi. */
+  save: (board: number, ns: number, r: BoardResult | null) => Promise<boolean | null>
   onResults: (r: Results) => void
   back: () => void
+  backLabel?: string
+  initialBoard?: number
 }) {
   const boards = [...new Set(m.rounds.flat().flatMap(a => a.boards))].sort((x, y) => x - y)
-  const [board, setBoard] = useState(boards[0] ?? 1)
+  const [board, setBoard] = useState(initialBoard ?? boards[0] ?? 1)
   const [slot, setSlot] = useState<Slot | null>(null)
   const [entry, setEntry] = useState<ContractEntry>(DEFAULT_ENTRY)
   const [busy, setBusy] = useState(false)
@@ -33,13 +42,12 @@ export default function MasterEditor({ tournamentId, name, m, results, password,
     const key = resultKey(board, a.ns)
     const r = value ? makeResult(a, s.round, board, value) : null
     setError(null)
-    const answer = await getAnswer()
-    if (answer === null) return
     setBusy(true)
     try {
-      const ok = await masterWriteResult(tournamentId, password, answer, board, a.ns, r)
+      const ok = await save(board, a.ns, r)
+      if (ok === null) return
       if (!ok) {
-        setError('Kaydedilemedi: yönetici parolası ya da güvenlik cevabı kabul edilmedi.')
+        setError('Kaydedilemedi: yetki kabul edilmedi (parola/şifre ya da turnuva kilitli).')
         return
       }
       const next = { ...results }
@@ -96,7 +104,7 @@ export default function MasterEditor({ tournamentId, name, m, results, password,
 
   return (
     <div className="space-y-4">
-      <BackButton onClick={back}>Sıralama</BackButton>
+      <BackButton onClick={back}>{backLabel}</BackButton>
       <Card>
         <div className="text-lg font-bold">🔑 Skor düzelt</div>
         <div className="text-sm text-slate-500">{name} · Board seç, sonra düzeltilecek masaya dokun.</div>

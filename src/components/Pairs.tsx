@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { isHowell, pairNumbers, type Movement } from '../tournament/movement'
 import {
   CATEGORIES,
-  pairCategory,
+  pairCategories,
   pairKey,
   pairLabel,
   pairNames,
@@ -30,7 +30,9 @@ export function PairEditor({ howell = false, side, number, names, onSave, back, 
   const current = names?.[key]
   const [player1, setPlayer1] = useState(current?.player1 ?? '')
   const [player2, setPlayer2] = useState(current?.player2 ?? '')
-  const [category, setCategory] = useState<Category | undefined>(current?.category)
+  const [categories, setCategories] = useState<Category[]>(current?.categories ?? [])
+  const toggle = (c: Category) =>
+    setCategories(prev => CATEGORIES.filter(x => (x === c ? !prev.includes(c) : prev.includes(x))))
 
   const input = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-lg'
 
@@ -54,18 +56,20 @@ export function PairEditor({ howell = false, side, number, names, onSave, back, 
         </label>
 
         <div>
-          <span className="text-sm font-medium text-slate-500">Kategori</span>
+          <span className="text-sm font-medium text-slate-500">Kategoriler (birden fazla seçilebilir)</span>
           <div className="mt-1 flex flex-wrap gap-1.5">
-            {[undefined, ...CATEGORIES].map(c => (
+            {CATEGORIES.map(c => (
               <button
-                key={c ?? 'yok'}
+                key={c}
                 type="button"
-                onClick={() => setCategory(c)}
+                aria-pressed={categories.includes(c)}
+                onClick={() => toggle(c)}
                 className={`rounded-full border px-3 py-1.5 text-sm font-medium ${
-                  category === c ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-300 bg-white'
+                  categories.includes(c) ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-300 bg-white'
                 }`}
               >
-                {c ?? 'Belirtilmedi'}
+                {categories.includes(c) && '✓ '}
+                {c}
               </button>
             ))}
           </div>
@@ -76,7 +80,8 @@ export function PairEditor({ howell = false, side, number, names, onSave, back, 
         type="button"
         className="h-14 w-full rounded-2xl bg-emerald-700 text-lg font-semibold text-white"
         onClick={() => {
-          onSave(key, { player1, player2, category })
+          // kayıtlı oyuncu numaraları korunur (hakem panelinden seçildiyse)
+          onSave(key, { ...current, player1, player2, categories })
           back()
         }}
       >
@@ -105,7 +110,7 @@ function PairList({ howell, side, pairs, names, openPair }: {
       </div>
       {pairs.map(n => {
         const label = pairNames(names, side, n)
-        const cat = pairCategory(names, side, n)
+        const cat = pairCategories(names, side, n).join(', ')
         return (
           <button
             key={n}

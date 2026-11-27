@@ -113,7 +113,8 @@ export interface PairRow {
   number: number
   player1: string
   player2: string
-  category: Category | null
+  category: Category | null // eski sürümler için: ilk kategori
+  categories?: Category[] | null
   mp1?: string | null
   mp2?: string | null
 }
@@ -127,9 +128,10 @@ export function pairToRow(tournamentId: string, key: string, p: PairInfo): PairR
     number: Number(num),
     player1: c.player1,
     player2: c.player2,
-    category: c.category ?? null,
+    category: c.categories?.[0] ?? null,
   }
-  // numaralar sadece varsa gönderilir (yoksa sunucudaki değer korunur; eski sunucuyla da uyumlu)
+  // kategoriler ve numaralar sadece varsa gönderilir (yoksa sunucudaki değer korunur; eski sunucuyla da uyumlu)
+  row.categories = c.categories ?? []
   if (c.mp1) row.mp1 = c.mp1
   if (c.mp2) row.mp2 = c.mp2
   return row
@@ -141,7 +143,7 @@ export function pairFromRow(row: PairRow): { key: string; info: PairInfo } {
     info: cleanPair({
       player1: row.player1,
       player2: row.player2,
-      category: row.category ?? undefined,
+      categories: row.categories ?? (row.category ? [row.category] : undefined),
       mp1: row.mp1 ?? undefined,
       mp2: row.mp2 ?? undefined,
     }),

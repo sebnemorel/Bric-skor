@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { mergeNames, pairFromRow, pairToRow } from '../cloud/sync'
-import { cleanPair, pairCategory, pairKey, pairNames, type PairNames } from './pairs'
+import { cleanPair, pairCategories, pairKey, pairNames, type PairNames } from './pairs'
 import { computeStandings, rankSubset } from './standings'
 import { resultKey, type BoardResult, type Results } from './results'
 
 describe('çift isimleri', () => {
   const names: PairNames = {
-    [pairKey('NS', 1)]: { player1: 'Ayşe Yılmaz', player2: 'Mehmet Kaya', category: 'Karışık' },
+    [pairKey('NS', 1)]: { player1: 'Ayşe Yılmaz', player2: 'Mehmet Kaya', categories: ['Karışık', 'Senyör'] },
     [pairKey('EW', 2)]: { player1: 'Ali Demir', player2: '' },
   }
 
@@ -17,22 +17,24 @@ describe('çift isimleri', () => {
     expect(pairNames(undefined, 'NS', 1)).toBe('')
   })
 
-  it('kategori', () => {
-    expect(pairCategory(names, 'NS', 1)).toBe('Karışık')
-    expect(pairCategory(names, 'EW', 2)).toBeUndefined()
+  it('kategoriler', () => {
+    expect(pairCategories(names, 'NS', 1)).toEqual(['Karışık', 'Senyör'])
+    expect(pairCategories(names, 'EW', 2)).toEqual([])
   })
 
   it('temizleme: boşluk, uzunluk, geçersiz kategori', () => {
-    const c = cleanPair({ player1: '  Ayşe   Yılmaz ', player2: 'x'.repeat(80), category: 'Pro' as never })
+    const c = cleanPair({ player1: '  Ayşe   Yılmaz ', player2: 'x'.repeat(80), categories: ['Pro' as never, 'Genç', 'Kadın', 'Genç'] })
     expect(c.player1).toBe('Ayşe Yılmaz')
     expect(c.player2).toHaveLength(60)
-    expect(c.category).toBeUndefined()
+    expect(c.categories).toEqual(['Kadın', 'Genç'])
   })
 
   it('veritabanı satırı gidiş-dönüş', () => {
-    const row = pairToRow('t1', 'EW-7', { player1: 'Ali', player2: 'Veli', category: 'Senyör' })
-    expect(row).toMatchObject({ side: 'EW', number: 7, category: 'Senyör' })
-    expect(pairFromRow(row)).toEqual({ key: 'EW-7', info: { player1: 'Ali', player2: 'Veli', category: 'Senyör' } })
+    const row = pairToRow('t1', 'EW-7', { player1: 'Ali', player2: 'Veli', categories: ['Senyör', 'Genç'] })
+    expect(row).toMatchObject({ side: 'EW', number: 7, category: 'Senyör', categories: ['Senyör', 'Genç'] })
+    expect(pairFromRow(row)).toEqual({ key: 'EW-7', info: { player1: 'Ali', player2: 'Veli', categories: ['Senyör', 'Genç'] } })
+    // eski sürümden kalan tek kategorili satır
+    expect(pairFromRow({ ...row, categories: null, category: 'Kadın' }).info.categories).toEqual(['Kadın'])
   })
 
   it('gönderilmemiş yerel isim sunucudakinden önceliklidir', () => {

@@ -5,6 +5,7 @@ import { cloudEnabled, fetchPairs, listPlayers, verifyTd, type Player } from '..
 import type { PairNames } from '../tournament/pairs'
 import PlayersTab from './PlayersTab'
 import SetupTab from './SetupTab'
+import LiveTab from './LiveTab'
 import TableQRs from './TableQRs'
 import { loadTd, saveTd, type TdTournament } from './tdStorage'
 
@@ -57,7 +58,7 @@ function Login({ onLogin }: { onLogin: (password: string) => void }) {
   )
 }
 
-function Ready({ t, onNew }: { t: TdTournament; onNew: () => void }) {
+function QrView({ t }: { t: TdTournament }) {
   const [names, setNames] = useState<PairNames>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -66,6 +67,25 @@ function Ready({ t, onNew }: { t: TdTournament; onNew: () => void }) {
       .then(setNames)
       .catch(e => setError((e as Error).message))
   }, [t.id])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 print:hidden">
+        <p className="flex-1 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
+          Her masaya kendi QR'ını koy. Masadaki telefon QR'ı okutunca doğrudan bu turnuvaya ve o masaya bağlanır.
+        </p>
+        <button type="button" onClick={() => window.print()} className="h-11 rounded-xl bg-emerald-700 px-5 font-semibold text-white">
+          🖨 Yazdır
+        </button>
+      </div>
+      {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700 print:hidden">{error}</p>}
+      <TableQRs t={t} names={names} />
+    </div>
+  )
+}
+
+function Ready({ t, onNew, onFinished }: { t: TdTournament; onNew: () => void; onFinished: () => void }) {
+  const [view, setView] = useState<'live' | 'qr'>('live')
 
   return (
     <div className="space-y-6">
@@ -80,10 +100,24 @@ function Ready({ t, onNew }: { t: TdTournament; onNew: () => void }) {
           <div className="text-xs text-slate-500">Turnuva kodu</div>
           <div className="font-mono text-2xl font-bold tracking-widest">{t.code}</div>
         </div>
+        <nav className="flex gap-1 rounded-xl bg-slate-100 p-1">
+          {(
+            [
+              ['live', '📊 Canlı kontrol'],
+              ['qr', "🔳 Masa QR'ları"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setView(id)}
+              className={`h-9 rounded-lg px-4 text-sm font-medium ${view === id ? 'bg-white shadow-sm' : 'text-slate-600'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
         <div className="ml-auto flex gap-2">
-          <button type="button" onClick={() => window.print()} className="h-11 rounded-xl bg-emerald-700 px-5 font-semibold text-white">
-            🖨 Masa QR'larını yazdır
-          </button>
           <button
             type="button"
             onClick={() => {
@@ -101,13 +135,7 @@ function Ready({ t, onNew }: { t: TdTournament; onNew: () => void }) {
         </div>
       </section>
 
-      <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 print:hidden">
-        Her masaya kendi QR'ını koy. Masadaki telefon QR'ı okutunca doğrudan bu turnuvaya ve o masaya bağlanır. Canlı kontrol ekranı
-        (masa tablosu, tur süresi, sıralama) bir sonraki adımda bu sayfaya gelecek.
-      </p>
-      {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700 print:hidden">{error}</p>}
-
-      <TableQRs t={t} names={names} />
+      {view === 'live' ? <LiveTab td={t} onFinished={onFinished} /> : <QrView t={t} />}
     </div>
   )
 }
@@ -187,6 +215,11 @@ export default function TdPanel() {
                 onNew={() => {
                   saveTd(null)
                   setTd(null)
+                }}
+                onFinished={() => {
+                  const t = { ...td, finished: true }
+                  saveTd(t)
+                  setTd(t)
                 }}
               />
             ) : (

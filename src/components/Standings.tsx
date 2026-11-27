@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Movement } from '../tournament/movement'
-import { CATEGORIES, pairCategory, pairNames, type Category } from '../tournament/pairs'
+import { CATEGORIES, pairCategories, pairNames, type Category } from '../tournament/pairs'
 import { formatResult } from '../tournament/results'
 import { combinedStandings, computeStandings, rankSubset } from '../tournament/standings'
 import { isHowell, pairNumbers } from '../tournament/movement'
@@ -31,9 +31,9 @@ export default function Standings({ tournament, m, back, backLabel = 'Turlar', b
   const names = tournament.names
   const all = howell || side === 'ns' ? st.ns : st.ew
   // bu tarafta kullanılan kategoriler (filtre butonları için)
-  const usedCategories = CATEGORIES.filter(c => all.some(s => pairCategory(names, pairSide, s.pair) === c))
+  const usedCategories = CATEGORIES.filter(c => all.some(s => pairCategories(names, pairSide, s.pair).includes(c)))
   const activeCategory = category && usedCategories.includes(category) ? category : null
-  const list = activeCategory ? rankSubset(all, p => pairCategory(names, pairSide, p) === activeCategory) : all
+  const list = activeCategory ? rankSubset(all, p => pairCategories(names, pairSide, p).includes(activeCategory)) : all
   const prefix = howell ? 'Çift' : side === 'ns' ? 'K-G' : 'D-B'
   const playedBoards = [...st.boards.keys()]
   const selected = board !== null ? st.boards.get(board) : undefined
@@ -106,7 +106,7 @@ export default function Standings({ tournament, m, back, backLabel = 'Turlar', b
                     <div className="font-medium leading-tight">{pairNames(names, pairSide, s.pair) || `${prefix} ${s.pair}`}</div>
                     <div className="text-xs text-slate-500">
                       {prefix} {s.pair}
-                      {pairCategory(names, pairSide, s.pair) && ` · ${pairCategory(names, pairSide, s.pair)}`}
+                      {pairCategories(names, pairSide, s.pair).length > 0 && ` · ${pairCategories(names, pairSide, s.pair).join(', ')}`}
                       {` · ${s.boards} board`}
                     </div>
                   </td>

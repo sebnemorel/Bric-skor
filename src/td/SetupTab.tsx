@@ -13,7 +13,7 @@ import {
 } from '../tournament/movement'
 import {
   CATEGORIES,
-  pairCategoryFromPlayers,
+  pairCategoriesFromPlayers,
   pairKey,
   pairLabel,
   type Category,
@@ -64,7 +64,7 @@ function PlayerInput({ value, onChange, byNo, label }: {
         {r.player ? (
           <span className="text-emerald-800">
             ✓ {r.player.name}
-            {r.player.category && <span className="text-slate-500"> · {r.player.category}</span>}
+            {r.player.categories.length > 0 && <span className="text-slate-500"> · {r.player.categories.join(', ')}</span>}
           </span>
         ) : r.unknownNo ? (
           <span className="text-red-700">Bu numara kayıtlı değil</span>
@@ -79,7 +79,7 @@ function PlayerInput({ value, onChange, byNo, label }: {
 interface PairForm {
   p1: Slot
   p2: Slot
-  category: Category | null // null = oyunculardan otomatik
+  categories: Category[] | null // null = oyunculardan otomatik
 }
 
 export default function SetupTab({ players, onCreated }: { players: Player[]; onCreated: (t: Omit<TdTournament, 'createdAt'>) => void }) {
@@ -108,7 +108,7 @@ export default function SetupTab({ players, onCreated }: { players: Player[]; on
     ew.forEach(n => rows.push({ key: pairKey('EW', n), side: 'EW', n }))
   }
 
-  const pf = (key: string): PairForm => pairs[key] ?? { p1: { text: '' }, p2: { text: '' }, category: null }
+  const pf = (key: string): PairForm => pairs[key] ?? { p1: { text: '' }, p2: { text: '' }, categories: null }
   const setPf = (key: string, f: Partial<PairForm>) => setPairs(prev => ({ ...prev, [key]: { ...pf(key), ...f } }))
 
   const info = (key: string): PairInfo | null => {
@@ -121,7 +121,7 @@ export default function SetupTab({ players, onCreated }: { players: Player[]; on
       player2: b.name,
       mp1: a.mp,
       mp2: b.mp,
-      category: f.category ?? pairCategoryFromPlayers(a.player?.category, b.player?.category),
+      categories: f.categories ?? pairCategoriesFromPlayers(a.player?.categories, b.player?.categories),
     }
   }
 
@@ -279,25 +279,37 @@ export default function SetupTab({ players, onCreated }: { players: Player[]; on
           <div className="divide-y divide-slate-100">
             {rows.map(r => {
               const f = pf(r.key)
-              const auto = info(r.key)?.category
+              const auto = pairCategoriesFromPlayers(resolve(f.p1.text, byNo).player?.categories, resolve(f.p2.text, byNo).player?.categories)
+              const cats = f.categories ?? auto
               return (
                 <div key={r.key} className="flex items-start gap-3 px-4 py-2">
                   <div className="w-20 shrink-0 pt-2 font-semibold">{pairLabel(howell, r.side, r.n)}</div>
                   <PlayerInput label={`${pairLabel(howell, r.side, r.n)} 1. oyuncu`} value={f.p1} byNo={byNo} onChange={s => setPf(r.key, { p1: s })} />
                   <PlayerInput label={`${pairLabel(howell, r.side, r.n)} 2. oyuncu`} value={f.p2} byNo={byNo} onChange={s => setPf(r.key, { p2: s })} />
-                  <select
-                    aria-label={`${pairLabel(howell, r.side, r.n)} kategori`}
-                    className="w-44 shrink-0 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                    value={f.category ?? ''}
-                    onChange={e => setPf(r.key, { category: (e.target.value || null) as Category | null })}
-                  >
-                    <option value="">{auto ? `Otomatik: ${auto}` : 'Otomatik'}</option>
-                    {CATEGORIES.map(c => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex w-64 shrink-0 flex-wrap items-center gap-1 pt-1" aria-label={`${pairLabel(howell, r.side, r.n)} kategoriler`}>
+                    {CATEGORIES.filter(c => c !== 'Açık').map(c => {
+                      const on = cats.includes(c)
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          aria-pressed={on}
+                          title={f.categories ? 'Elle seçildi' : 'Oyunculardan otomatik'}
+                          onClick={() => setPf(r.key, { categories: CATEGORIES.filter(x => (x === c ? !on : cats.includes(x))) })}
+                          className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                            on ? (f.categories ? 'border-slate-800 bg-slate-800 text-white' : 'border-emerald-600 bg-emerald-600 text-white') : 'border-slate-200 text-slate-400'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      )
+                    })}
+                    {f.categories && (
+                      <button type="button" className="text-xs text-slate-500 underline" onClick={() => setPf(r.key, { categories: null })}>
+                        otomatik
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}

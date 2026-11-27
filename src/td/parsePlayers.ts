@@ -1,18 +1,33 @@
 // Excel'den yapıştırılan ya da elle yazılan oyuncu listesini çözer.
-// Her satır: "numara <ayraç> ad soyad <ayraç> kategori" (sıra fark etmez; numara rakamlardan oluşan alandır).
-// Ayraç: sekme (Excel), noktalı virgül ya da virgül.
-import { isMpNo, type PlayerCategory } from '../tournament/pairs'
+// Her satır: "numara <ayraç> ad soyad <ayraç> kategoriler" (sıra fark etmez; numara rakamlardan oluşan alandır).
+// Ayraç: sekme (Excel), noktalı virgül ya da virgül. Kategoriler aynı hücrede "Erkek, Genç" ya da "Kadın/Senyör" gibi de yazılabilir.
 import type { Player } from '../cloud/api'
+import { cleanPlayerCategories, isMpNo, type PlayerCategory } from '../tournament/pairs'
 
 const lower = (s: string) => s.toLocaleLowerCase('tr').trim()
 
+/** Tek bir kategori kelimesi; null = "kategori yok" anlamında (açık/boş), undefined = tanınmadı. */
 export function parseCategory(s: string): PlayerCategory | null | undefined {
   const t = lower(s)
-  if (!t || t === '-' || t === 'açık' || t === 'acik' || t === 'erkek') return null
-  if (['kadın', 'kadin', 'k', 'bayan', 'kız', 'women', 'w'].includes(t)) return 'Kadın'
+  if (!t || t === '-' || t === 'açık' || t === 'acik' || t === 'yok') return null
+  if (['kadın', 'kadin', 'k', 'bayan', 'kız', 'kiz', 'women', 'w', 'f'].includes(t)) return 'Kadın'
+  if (['erkek', 'e', 'bay', 'men', 'm'].includes(t)) return 'Erkek'
   if (['senyör', 'senyor', 'senior', 's', 'sen'].includes(t)) return 'Senyör'
-  if (['genç', 'genc', 'junior', 'g', 'j'].includes(t)) return 'Genç'
-  return undefined // tanınmadı
+  if (['genç', 'genc', 'junior', 'g', 'j', 'jun'].includes(t)) return 'Genç'
+  return undefined
+}
+
+/** Bir hücre tamamen kategorilerden mi oluşuyor? Öyleyse onları döner, değilse null. */
+function categoryCell(cell: string): PlayerCategory[] | null {
+  const tokens = cell.split(/[\s,+/&]+/).filter(Boolean)
+  if (tokens.length === 0) return null
+  const out: PlayerCategory[] = []
+  for (const tok of tokens) {
+    const c = parseCategory(tok)
+    if (c === undefined) return null
+    if (c) out.push(c)
+  }
+  return out
 }
 
 export function parsePlayers(text: string): { players: Player[]; errors: string[] } {
@@ -24,19 +39,20 @@ export function parsePlayers(text: string): { players: Player[]; errors: string[
     const parts = line.split(line.includes('\t') ? '\t' : line.includes(';') ? ';' : ',').map(p => p.trim())
     const noIdx = parts.findIndex(isMpNo)
     if (noIdx < 0) {
-      // başlık satırını sessizce atla
-      if (i === 0 && /numara|no|isim|ad/i.test(line)) return
+      if (i === 0 && /numara|no|isim|ad/i.test(line)) return // başlık satırı
       errors.push(`${i + 1}. satır: master point numarası bulunamadı`)
       return
     }
-    const rest = parts.filter((_, j) => j !== noIdx)
-    let category: PlayerCategory | null = null
-    const catIdx = rest.findIndex(p => p && parseCategory(p) !== undefined && parseCategory(p) !== null)
-    if (catIdx >= 0) {
-      category = parseCategory(rest[catIdx]) ?? null
-      rest.splice(catIdx, 1)
-    }
-    const name = rest.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().slice(0, 60)
+    const categories: PlayerCategory[] = []
+    const nameParts: string[] = []
+    parts.forEach((p, j) => {
+      if (j === noIdx || !p) return
+      // tek harfli kısaltmalar (k, e, s, g) isim de olabilir; sadece isim bulunduktan sonra kategori say
+      const cats = categoryCell(p)
+      if (cats && (nameParts.length > 0 || p.length > 1)) categories.push(...cats)
+      else nameParts.push(p)
+    })
+    const name = nameParts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 60)
     if (!name) {
       errors.push(`${i + 1}. satır: isim yok`)
       return
@@ -46,8 +62,12 @@ export function parsePlayers(text: string): { players: Player[]; errors: string[
       errors.push(`${i + 1}. satır: ${mpNo} numarası listede iki kez var`)
       return
     }
+    if (categories.includes('Kadın') && categories.includes('Erkek')) {
+      errors.push(`${i + 1}. satır: hem Kadın hem Erkek yazılmış`)
+      return
+    }
     seen.add(mpNo)
-    players.push({ mpNo, name, category })
+    players.push({ mpNo, name, categories: cleanPlayerCategories(categories) })
   })
   return { players, errors }
 }

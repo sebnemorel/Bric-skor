@@ -132,9 +132,13 @@ where id = 1;
 
 `/hakem` adresinde açılır (ör. `https://bric-skor-akdeniz.vercel.app/hakem`). Kulüp hakem şifresiyle girilir.
 
-- **Oyuncular:** master point numarası, ad soyad, kategori. Tek tek ya da Excel'den yapıştırarak toplu eklenir.
-- **Turnuva:** hareket, çift ve board sayısı; çiftler numarayla seçilir, çift kategorisi otomatik hesaplanır.
+- **Oyuncular:** master point numarası, ad soyad, kategoriler (Kadın/Erkek + Senyör/Genç, birden fazla). Tek tek ya da Excel'den yapıştırarak toplu eklenir.
+- **Turnuva:** hareket, çift ve board sayısı; çiftler numarayla seçilir, çiftin kategorileri oyunculardan otomatik hesaplanır
+  (iki kadın → Kadın, kadın+erkek → Karışık, iki senyör → Senyör, iki genç → Genç; bir çift birden fazla kategoride olabilir).
 - **Masa QR'ları:** her masa telefonu kendi QR'ını okutunca doğrudan o turnuvaya ve masaya bağlanır.
+- **Canlı kontrol:** masa × tur/board ilerleme tablosu, canlı sıralama, board sonuçları ve skor düzeltme, turnuvayı bitirme.
+- **Tur süresi:** hakem ayarlar, başlatır, durdurur, süre ekler; kalan süre masa telefonlarında ve büyük ekranda (📺) görünür.
+  Bunun için `11_timer.sql` çalıştırılmış olmalı.
 
 Kulüp hakem şifresi bu depoda **yoktur**. `10_players_td.sql` çalıştırıldıktan sonra Supabase SQL Editor'de ayarlanır
 (`SIFRE` yerine şifreyi yaz). Kulüp yöneticisi parolası da hakem paneline girer.

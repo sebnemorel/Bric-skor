@@ -11,6 +11,7 @@ export interface TdTournament {
   boardsPerRound: number
   movement: MovementKind
   createdAt: number
+  finished?: boolean
 }
 
 const KEY = 'bric-skor:td'

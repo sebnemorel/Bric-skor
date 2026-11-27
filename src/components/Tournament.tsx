@@ -38,6 +38,7 @@ import { MyTableView, TablePicker } from './MyTable'
 import { PairEditor, PairsView } from './Pairs'
 import { nameSide, pairNames, type Side } from '../tournament/pairs'
 import Standings from './Standings'
+import TimerBar from '../timer/TimerBar'
 import { BackButton, Card, RoundButton, ScoreBoxes } from './ui'
 
 const MINUTES_PER_BOARD = 7.5
@@ -402,6 +403,7 @@ function CodeBox({ tournament, status, pendingCount }: { tournament: T; status: 
         {st.text}
         {pendingCount > 0 && <span className="text-amber-700">· {pendingCount} skor gönderilmeyi bekliyor</span>}
       </div>
+      {!tournament.finished && <TimerBar tournamentId={tournament.cloud!.id} />}
     </div>
   )
 }

@@ -141,7 +141,7 @@ export async function listArchive(): Promise<ArchiveEntry[]> {
 export interface Player {
   mpNo: string
   name: string
-  category: PlayerCategory | null
+  categories: PlayerCategory[]
 }
 
 export type AuthResult = { ok: boolean; locked: boolean; configured: boolean }
@@ -154,12 +154,12 @@ export async function verifyTd(password: string): Promise<AuthResult> {
 }
 
 export async function listPlayers(): Promise<Player[]> {
-  const { data, error } = await db().from('players').select('mp_no,name,category').order('name').limit(5000)
+  const { data, error } = await db().from('players').select('mp_no,name,categories').order('name').limit(5000)
   if (error) fail('Oyuncu listesi alınamadı.', error)
-  return (data as { mp_no: string; name: string; category: PlayerCategory | null }[]).map(r => ({
+  return (data as { mp_no: string; name: string; categories: PlayerCategory[] | null }[]).map(r => ({
     mpNo: r.mp_no,
     name: r.name,
-    category: r.category,
+    categories: r.categories ?? [],
   }))
 }
 
@@ -168,7 +168,7 @@ export async function upsertPlayer(password: string, p: Player): Promise<boolean
     p_password: password,
     p_mp_no: p.mpNo,
     p_name: p.name,
-    p_category: p.category ?? '',
+    p_categories: p.categories,
   })
   if (error) fail('Oyuncu kaydedilemedi.', error)
   return data === true
@@ -184,10 +184,58 @@ export async function deletePlayer(password: string, mpNo: string): Promise<bool
 export async function importPlayers(password: string, players: Player[]): Promise<number> {
   const { data, error } = await db().rpc('td_import_players', {
     p_password: password,
-    p_rows: players.map(p => ({ mp_no: p.mpNo, name: p.name, category: p.category ?? '' })),
+    p_rows: players.map(p => ({ mp_no: p.mpNo, name: p.name, categories: p.categories })),
   })
   if (error) fail('Oyuncular eklenemedi.', error)
   return data as number
+}
+
+// ---------------- Tur süresi ----------------
+
+type TimerRow = { round: number; roundMinutes: number; endsAt: string | null; remainingSec: number | null }
+
+/** Turnuvanın süresini ve sunucu saatini getirir (süre yoksa timer null). */
+export async function getTimer(tournamentId: string): Promise<{ timer: TimerRow | null; now: string }> {
+  const { data, error } = await db().rpc('get_timer', { p_id: tournamentId })
+  if (error) fail('Süre alınamadı.', error)
+  return data as { timer: TimerRow | null; now: string }
+}
+
+/** Hakem: süreyi ayarlar (running ise şimdi başlar ve seconds sonra biter, değilse durur). */
+export async function setTimer(
+  tournamentId: string,
+  secret: string,
+  c: { round: number; minutes: number; running: boolean; seconds: number },
+): Promise<boolean> {
+  const { data, error } = await db().rpc('td_set_timer', {
+    p_id: tournamentId,
+    p_secret: secret,
+    p_round: c.round,
+    p_minutes: c.minutes,
+    p_running: c.running,
+    p_seconds: Math.round(c.seconds),
+  })
+  if (error) fail('Süre ayarlanamadı.', error)
+  return data === true
+}
+
+/** Süre değişikliklerini canlı dinler. */
+export function subscribeTimer(tournamentId: string, onChange: (row: TimerRow) => void): () => void {
+  const channel: RealtimeChannel = db()
+    .channel(`timer:${tournamentId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'timers', filter: `tournament_id=eq.${tournamentId}` },
+      payload => {
+        if (payload.eventType === 'DELETE') return
+        const r = payload.new as { round: number; round_minutes: number; ends_at: string | null; remaining_sec: number | null }
+        onChange({ round: r.round, roundMinutes: r.round_minutes, endsAt: r.ends_at, remainingSec: r.remaining_sec })
+      },
+    )
+    .subscribe()
+  return () => {
+    void db().removeChannel(channel)
+  }
 }
 
 /** Kulüp yöneticisi parolasını doğrular (yanlışlar sunucuda sayılır, 10'da kilitlenir). */

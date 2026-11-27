@@ -65,5 +65,7 @@ _Ana plan tamamlandı 🎉 Sıradaki işler aşağıdaki "İyileştirmeler" ve "
 - [x] WhatsApp/GitHub/Instagram içi tarayıcıyı algıla, Safari/Chrome'a yönlendir; iOS 26 adımları
 - [x] Kurulum QR sayfası (yazdırılabilir)
 - [x] Hakem paneli (bilgisayar): kurulum, master point numarasıyla kayıtlı oyuncular, masa QR'ları
-- [ ] Canlı kontrol ekranı: masa × board tablosu, sıralama, düzeltme, tur süresi geri sayımı
+- [x] Canlı kontrol ekranı: masa × board tablosu, sıralama, düzeltme, tur süresi geri sayımı
 - [ ] Sonuçları yazdır / PDF / Excel
+- [ ] Telefonun tur göstergesi hakemin başlattığı tura kendiliğinden geçsin
+- [x] Oyuncu ve çiftlerde birden fazla kategori (Erkek kategorisi eklendi)

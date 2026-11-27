@@ -1,7 +1,7 @@
 // Kulüp arşivi: bitirilmiş turnuvaların listesi ve salt okunur sonuçları.
 
 import { useEffect, useState } from 'react'
-import { adminDeleteTournament, fetchPairs, fetchResults, listArchive, verifyMaster, type ArchiveEntry } from '../cloud/api'
+import { adminDeleteTournament, fetchPairs, masterWriteResult, fetchResults, listArchive, verifyMaster, type ArchiveEntry } from '../cloud/api'
 import { createMovement } from '../tournament/movement'
 import type { Tournament } from '../tournament/storage'
 import MasterEditor from './MasterEditor'
@@ -139,12 +139,14 @@ export default function Archive() {
       return (
         <>
           <MasterEditor
-            tournamentId={open.entry.id}
             name={t.name}
             m={m}
             results={t.results}
-            password={master}
-            getAnswer={getAnswer}
+            save={async (board, ns, r) => {
+              const a = await getAnswer()
+              if (a === null) return null
+              return masterWriteResult(open.entry.id, master, a, board, ns, r)
+            }}
             onResults={results => setOpen({ ...open, tournament: { ...t, results } })}
             back={() => setEditing(false)}
           />
